@@ -1,4 +1,6 @@
-class Tileset
+import ImageHelper from './ImageHelper'
+
+export default class Tileset
 {
 	constructor(src)
 	{

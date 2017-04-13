@@ -1,4 +1,4 @@
-class ImageHelper
+export default class ImageHelper
 {
 	// https://davidwalsh.name/convert-canvas-image
 	static imageToCanvas(image)

@@ -1,0 +1,7 @@
+{
+	"presets": [ "env", "latest" ],
+	"plugins": [
+		"transform-object-rest-spread",
+		[ "transform-strict-mode", { "strict": false }]
+	]
+}

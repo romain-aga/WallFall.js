@@ -1,4 +1,6 @@
-class WallFall
+import Game from './Game'
+
+export default class WallFall
 {
 	constructor(data)
 	{

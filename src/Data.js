@@ -1,4 +1,4 @@
-class Data
+export default class Data
 {
 	static getCanvasContext()
 	{

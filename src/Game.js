@@ -1,4 +1,6 @@
-class Game
+import Tileset from './Tools/Tileset'
+
+export default class Game
 {
 	constructor(data)
 	{
