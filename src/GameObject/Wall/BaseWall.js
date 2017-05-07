@@ -1,9 +1,9 @@
-import Random from '../Tools/Random'
-import Collision from '../Tools/Collision'
-import MathTools from '../Tools/MathTools'
-import GameObjectBehavior from './GameObjectBehavior'
-import Pools from './Pools'
-import New from './New'
+import Random from '../../Tools/Random'
+import Collision from '../../Tools/Collision'
+import MathTools from '../../Tools/MathTools'
+import GameObjectBehavior from '../GameObjectBehavior'
+import Pools from '../Pools'
+import New from '../New'
 
 export default class BaseWall extends GameObjectBehavior
 {

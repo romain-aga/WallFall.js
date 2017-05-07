@@ -21,6 +21,32 @@ export default class Data
 		}
 	}
 
+	static _loadSounds()
+	{
+		const path = "data/sounds/effects/"
+		Data.sounds = {
+			levelUp: new Audio(path + "level-up.ogg"),
+			gameOver: new Audio(path + "game-over.ogg"),
+			getReady: new Audio(path + "get-ready.ogg"),
+			wallCollision: new Audio(path + "wall-collision.ogg"),
+			wallExplosion: new Audio(path + "wall-explosion.ogg"),
+			newOrb: new Audio(path + "new-orb.ogg"),
+			bonusOrb: new Audio(path + "bonus-orb.ogg"),
+			slowdownOrb: new Audio(path + "slowdown-orb.ogg"),
+		}
+	}
+
+	static _loadMusics()
+	{
+		const path = "data/sounds/musics/"
+		Data.musics = {}
+		Data.musics.game = [
+			new Audio(path + "game/SyncroSonic.ogg"),
+			new Audio(path + "game/beyond black hole (220v).ogg")
+		]
+		Data.musics.menu = new Audio(path + "menu/Check the Map !!.ogg")
+	}
+
 	static _getCanvasContext()
 	{
 		if ((Data.canvas = document.getElementById(Data.canvasName))
@@ -88,37 +114,13 @@ export default class Data
 	{
 		Data.tileset = new Tileset("data/assets.png")
 		Data.wallSprites = null;
-		Data.sphereSprites = null;
+		Data.orbSprites = null;
 		Data.tileset.tileset.onload
 			= () => {
 			Data.wallSprites = Data.tileset.getTiles(40, 40, 0, 0)
-			Data.sphereSprites = Data.tileset.getTiles(25, 25, 200, 0)
+			Data.orbSprites = Data.tileset.getTiles(25, 25, 200, 0)
 			onInitialized(Data)
 		}
-	}
-
-	static _loadSounds()
-	{
-		const path = "data/sounds/effects/"
-		Data.sounds = {
-			levelUp: new Audio(path + "level-up.ogg"),
-			gameOver: new Audio(path + "game-over.ogg"),
-			getReady: new Audio(path + "get-ready.ogg"),
-			wallCollision: new Audio(path + "wall-collision.ogg"),
-			wallExplosion: new Audio(path + "wall-explosion.ogg"),
-			newSphere: new Audio(path + "new-sphere.ogg"),
-		}
-	}
-
-	static _loadMusics()
-	{
-		const path = "data/sounds/musics/"
-		Data.musics = {}
-		Data.musics.game = [
-			new Audio(path + "game/SyncroSonic.ogg"),
-			new Audio(path + "game/beyond black hole (220v).ogg")
-		]
-		Data.musics.menu = new Audio(path + "menu/Check the Map !!.ogg")
 	}
 }
 

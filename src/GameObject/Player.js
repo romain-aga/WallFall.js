@@ -19,7 +19,7 @@ export default class Player extends GameObjectBehavior
             self.states = new Enum('normal', 'last', ...self.specialStates)
             self.sprites = []
             for (let i = 0; i < 5; ++i)
-                self.sprites.push(self.data.sphereSprites[0][i])
+                self.sprites.push(self.data.orbSprites[0][i])
             self.colors = [ "#7c1504", "#d20000", "#f6be0a", "#6b0e04","#ba7301" ]
             self.stateValues = {}
         }

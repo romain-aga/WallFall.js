@@ -1,8 +1,8 @@
 import BaseWall from './BaseWall'
-import Collision from '../Tools/Collision'
-import MathTools from '../Tools/MathTools'
-import Random from '../Tools/Random'
-import Pools from './Pools'
+import Collision from '../../Tools/Collision'
+import MathTools from '../../Tools/MathTools'
+import Random from '../../Tools/Random'
+import Pools from '../Pools'
 
 export default class ImmobileWall extends BaseWall
 {
@@ -22,7 +22,7 @@ export default class ImmobileWall extends BaseWall
 			self.x = Random.range(self.data.bounds.x.min, self.data.bounds.x.max - self.width)
             self.y = Random.range(self.data.bounds.y.min, self.data.bounds.y.max - self.height)
             findNewCoords = Pools.Wall.find(w => w !== self && Collision.rectRect(self, w))
-                || Pools.Sphere.find(s => Collision.circleRect(s, self))
+                || Pools.Orb.find(s => Collision.circleRect(s, self))
                 || Pools.Player.find(
                     p => MathTools.squareDistance(p.x, p.y, self.x, self.y) < MathTools.sqpw(p.width + self.width + 20))
 		}

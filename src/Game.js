@@ -7,7 +7,7 @@ export default class Game
 	constructor(data)
 	{
 		New.init(data)
-		this.levelStep = 5
+		this.levelStep = 10
 		this.levelMax = (spawnOrder.length - 1) * this.levelStep
 		this.data = data
 		this.level = 0
@@ -22,7 +22,7 @@ export default class Game
 	{
 		//this.music.play();
 		New.Player()
-		New.Sphere()
+		New.Orb()
 		this.update()
 	}
 	

@@ -1,8 +1,8 @@
 import Pool from './Pool'
 import Player from './Player'
-import Sphere from './Sphere'
-import Wall from './Wall'
-import ImmobileWall from './ImmobileWall'
+import Orb from './Orb/Orb'
+import Wall from './Wall/Wall'
+import ImmobileWall from './Wall/ImmobileWall'
 import Particle from './Particle'
 import Explosion from './Explosion'
 
@@ -14,7 +14,7 @@ export const spawnOrder = [
 const behaviors = [
     Particle,
     Explosion,
-    Sphere,
+    Orb,
     Player,
     ...spawnOrder
 ]

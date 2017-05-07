@@ -1,15 +1,15 @@
-import Random from '../Tools/Random'
-import MathTools from '../Tools/MathTools'
-import Collision from '../Tools/Collision'
-import GameObjectBehavior from './GameObjectBehavior'
-import Pools from './Pools'
-import New from './New'
+import Random from '../../Tools/Random'
+import MathTools from '../../Tools/MathTools'
+import Collision from '../../Tools/Collision'
+import GameObjectBehavior from '../GameObjectBehavior'
+import Pools from '../Pools'
+import New from '../New'
 
-export default class BaseSphere extends GameObjectBehavior
+export default class BaseOrb extends GameObjectBehavior
 {
     constructor()
 	{
-		super('Sphere')
+		super('Orb')
 	}
 
 	init(self, sprite, color, isUnique=false)
