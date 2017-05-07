@@ -1,10 +1,17 @@
 import Random from '../Tools/Random'
+import Collision from '../Tools/Collision'
 import MathTools from '../Tools/MathTools'
 import GameObjectBehavior from './GameObjectBehavior'
-import Pool from './Pool'
+import Pools from './Pools'
+import New from './New'
 
 export default class BaseWall extends GameObjectBehavior
 {
+	constructor()
+	{
+		super('Wall')
+	}
+
 	init(self, sprite, color)
 	{
 		self.sprite = sprite
@@ -31,7 +38,8 @@ export default class BaseWall extends GameObjectBehavior
 		]
 		self.i_newCoord = 5
 		let findNewCoords = true
-		while (findNewCoords)
+		let tries = 10
+		while (findNewCoords && 0 < tries--)
 		{
 			self.direction = Random.range(0, 3)
 			let random = Random.random() * (self.data.width - self.width)
@@ -39,7 +47,7 @@ export default class BaseWall extends GameObjectBehavior
 				|| self.data.bounds.x.min + random
 			self.y = (self.direction % 2 !== 0) && BaseWall._bounds[self.direction]
 				|| self.data.bounds.y.min + random
-			findNewCoords = Pool.pools.walls.find(
+			findNewCoords = Pools.Wall.find(
 				w => w !== self
 					&& w.x < self.x + self.width && self.x - self.width < w.x
 					&& w.y < self.y + self.height && self.y - self.height < w.y
@@ -47,10 +55,10 @@ export default class BaseWall extends GameObjectBehavior
 		}
 	}
 
-	penalties(self, obj)
+	penalties(self, player)
 	{
-		obj.lives--
-		obj.god = 10
+		player.lives--
+		player.stateValues.god = 10
 	}
 
 	update(self)
@@ -80,9 +88,9 @@ export default class BaseWall extends GameObjectBehavior
 
 	}
 
-	explosion(self)
+	explosion(self, particleSpeed)
 	{
-
+		New.Explosion(self.x, self.y, self.width, self.color, true, particleSpeed)
 	}
 
 	particles(self)
@@ -101,13 +109,20 @@ export default class BaseWall extends GameObjectBehavior
 				speed = self.speed * 5
 				decreaseSpeed = 1
 			}
-			Pool.pools.particles.create(self.x, self.y, direction, speed, self.width, self.color, true, decreaseSpeed)
+			New.Particle(self.x, self.y, direction, speed, self.width, self.color, true, decreaseSpeed)
 		}
 	}
 
 	collision(self)
 	{
-
+		Pools.Player.forEach(
+            p => p.state !== p.states.god && Collision.circleRect(p, self)
+				&& (
+					p.state === p.states.berserk
+					? self.destroy()
+					: this.penalties(self, p)
+				)
+        )
 	}
 
 	destroy(self)

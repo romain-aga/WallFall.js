@@ -1,3 +1,4 @@
+import Pools from './Pools'
 import GameObject from './GameObject'
 
 export default class Pool
@@ -5,7 +6,7 @@ export default class Pool
     static newPool(name, data)
     {
         if (! Pool.pools)
-            Pool.pools = {}
+            Pool.pools = Pools
         if (! Pool.pools[name])
             Pool.pools[name] = new Pool(data)
         else

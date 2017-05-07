@@ -1,10 +1,11 @@
 import MathTools from '../Tools/MathTools'
+import Pool from './Pool'
 
 export default class GameObjectBehavior
 {
-	constructor()
+	constructor(poolName=this.constructor.name)
 	{
-		GameObjectBehavior[this.constructor.name] = this
+		this.poolName = poolName
 	}
 
 	init(self)

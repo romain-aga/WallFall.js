@@ -9,6 +9,7 @@ export default class Sphere extends BaseSphere
 
     bonus(self)
     {
-        self.data.information.level += 0.2
+        self.data.information.level += 1
+        self.data.information.score += 10
     }
 }

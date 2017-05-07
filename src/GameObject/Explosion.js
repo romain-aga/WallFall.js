@@ -2,15 +2,16 @@ import MathTools from '../Tools/MathTools'
 import Color from '../Tools/Color'
 import Random from '../Tools/Random'
 import GameObjectBehavior from './GameObjectBehavior'
-import Pool from './Pool'
+import New from './New'
 
 export default class Explosion extends GameObjectBehavior
 {
-	init(self, x, y, width=25, color='#ffffff', colorGap=30, isSquare=false, decreasingSpeed=0.5)
+	init(self, x, y, width=25, color='#ffffff', isSquare=false, particleSpeed=5, decreasingSpeed=0.5, colorGap=30)
 	{
         self.x = x
         self.y = y
         self.decreasingSpeed = decreasingSpeed
+        self.particleSpeed = particleSpeed
         self.width = width
         self.height = width
         self.radius = width / 2
@@ -27,6 +28,8 @@ export default class Explosion extends GameObjectBehavior
 	
 	update(self)
 	{
+        self.x += self.decreasingSpeed
+        self.y += self.decreasingSpeed
         self.radius -= self.decreasingSpeed
         self.height = self.width = self.radius * 2
         if (self.radius <= 0)
@@ -36,13 +39,14 @@ export default class Explosion extends GameObjectBehavior
             let x = self.x + Random.range(-self.radius, self.radius)
             let y = self.y + Random.range(-self.radius, self.radius)
             let direction = MathTools.direction(self.x, self.y, x, y)
-            let speed = MathTools.squareDistance(self.x, self.y, x, y) / (self.radius * self.radius) * 5
+            let speed = self.particleSpeed
+                * MathTools.squareDistance(self.x, self.y, x, y) / (self.radius * self.radius) 
             let color = Color.rgbToHex(
                 self.rgb[0] + Random.range(0, self.colorGap),
                 self.rgb[1] + Random.range(0, self.colorGap),
                 self.rgb[2] + Random.range(0, self.colorGap)
             )
-            Pool.pools.particles.create(x, y, direction, speed, self.width, self.color, self.isSquare, self.decreaseSpeed)
+            New.Particle(x, y, direction, speed, self.width, self.color, self.isSquare, self.decreasingSpeed)
         }
 	}
 	

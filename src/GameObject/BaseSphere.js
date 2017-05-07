@@ -1,10 +1,17 @@
 import Random from '../Tools/Random'
 import MathTools from '../Tools/MathTools'
+import Collision from '../Tools/Collision'
 import GameObjectBehavior from './GameObjectBehavior'
-import Pool from './Pool'
+import Pools from './Pools'
+import New from './New'
 
 export default class BaseSphere extends GameObjectBehavior
 {
+    constructor()
+	{
+		super('Sphere')
+	}
+
 	init(self, sprite, color, isUnique=false)
 	{
 		self.sprite = sprite
@@ -23,16 +30,7 @@ export default class BaseSphere extends GameObjectBehavior
         {
             self.x = self.data.bounds.x.min + Random.range(0, self.data.width - self.width)
             self.y = self.data.bounds.y.min + Random.range(0, self.data.height - self.height)
-            findNewCoords = Pool.pools.walls.find(
-				function isInWall(w)
-                {
-                    let width = self.width + w.width
-                    let height = self.height + w.height
-                    return w.x - self.width <= self.x && self.x <= w.x + w.width + self.width
-                        && w.y - self.height <= self.y && self.y <= w.y + w.height + self.height
-                        && w.x - width <= self.x
-                }
-			)
+            findNewCoords = Pools.Wall.find(w => Collision.circleRect(self, w))
         }
 		while (findNewCoords)
 	}
@@ -42,23 +40,23 @@ export default class BaseSphere extends GameObjectBehavior
         this.collision(self)
     }
 
-	bonus(self)
+	bonus(self, player)
 	{
 
 	}
 
 	explosion(self)
 	{
-        Pool.pools.explosions.create(self.x, self.y, self.width, self.color)
+        New.Explosion(self.x, self.y, self.width, self.color)
 	}
 
 	collision(self)
 	{
-        Pool.pools.players.forEach(
+        Pools.Player.forEach(
             p => {
-                if (MathTools.squareDistance(self.x, self.y, p.x, p.y) < 625)
+                if (Collision.circleCircle(self, p))
                 {
-                    this.bonus(self)
+                    this.bonus(self, p)
                     this.explosion(self)
                     if (! self.isUnique)
                         this.newCoords(self)

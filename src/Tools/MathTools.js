@@ -36,4 +36,11 @@ export default class MathTools
             return (y2 <= y ? dir : 360 - dir)
         return (y < y2 ? dir + 180 : 180 - dir)
     }
+
+    static clamp(value, min, max)
+    {
+        return value < min
+            ? min
+            : (max < value ? max : value)
+    }
 }

@@ -1,21 +1,16 @@
 import Pool from './GameObject/Pool'
+import New from './GameObject/New'
 
 export default class Game
 {
 	constructor(data)
 	{
+		New.init(data)
 		this.data = data
 		this.level = 0
 		this.data.onWindowResize = (x, y) => this._onWindowResize(x, y)
 		this.context = data.context
 		this.music = new Audio("data/sounds/musics/game/03 - SyncroSonic.ogg")
-		Pool.newPool("particles", this.data)
-		Pool.newPool("explosions", this.data)
-		Pool.newPool("spheres", this.data)
-		Pool.newPool("walls", this.data)
-		Pool.newPool("players", this.data)
-		Pool.pools.particles.create = (...args) => Pool.pools.particles.new(this.data.behaviors.particle, ...args)
-		Pool.pools.explosions.create = (...args) => Pool.pools.explosions.new(this.data.behaviors.explosion, ...args)
 		this._poolValues = Object.keys(Pool.pools).map(k => Pool.pools[k])
 		this._drawBackground()
 	}
@@ -23,17 +18,16 @@ export default class Game
 	start()
 	{
 		//this.music.play();
-		Pool.pools.players.new(this.data.behaviors.player)
-		Pool.pools.spheres.new(this.data.behaviors.sphere)
+		New.Player()
+		New.Sphere()
 		this.update()
 	}
 	
 	update()
 	{
-		console.log(Pool.pools.particles.length, Pool.pools.particles.objects.length)
 		if (this.level < this.data.information.level | 0)
 		{
-			Pool.pools.walls.new(this.data.behaviors.wall)
+			New.ImmobileWall()
 			this.level++
 		}
 		this._updateObjects()

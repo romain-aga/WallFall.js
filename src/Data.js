@@ -1,5 +1,4 @@
 import Tileset from './Tools/Tileset'
-import behaviors from './GameObject/Behaviors'
 
 export default class Data
 {
@@ -127,5 +126,3 @@ Data.onWindowResize = null
 Data.canvasName = "WallFallCanvas"
 Data.width = 700
 Data.height = 700
-
-Data.behaviors = behaviors
