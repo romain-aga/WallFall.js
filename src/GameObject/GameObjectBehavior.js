@@ -2,6 +2,11 @@ import MathTools from '../Tools/MathTools'
 
 export default class GameObjectBehavior
 {
+	constructor()
+	{
+		GameObjectBehavior[this.constructor.name] = this
+	}
+
 	init(self)
 	{
 	}
@@ -18,7 +23,7 @@ export default class GameObjectBehavior
 	
 	draw(self)
 	{
-		self.data.context.drawImage(self.sprite, self.x, self.y)
+		self.data.context.drawImage(self.sprite, self.x | 0, self.y | 0)
 	}
 	
 	destroy(self)

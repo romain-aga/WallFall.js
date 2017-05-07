@@ -10,11 +10,6 @@ export default class WallFall
 	
 	run()
 	{
-		/*function draw()
-		{
-			this.current.draw()
-		}*/
 		this.current.start()
-		//setInterval(draw, 50)
 	}
 }
