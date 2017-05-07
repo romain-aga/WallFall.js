@@ -1,6 +1,6 @@
 import Random from './Tools/Random'
 import Pool from './GameObject/Pool'
-import New, { spawnOrder } from './GameObject/New'
+import New, { spawnOrder, bonusOrbs } from './GameObject/New'
 
 export default class Game
 {
@@ -9,6 +9,7 @@ export default class Game
 		New.init(data)
 		this.levelStep = 10
 		this.levelMax = (spawnOrder.length - 1) * this.levelStep
+		this.bonusMax = bonusOrbs.length - 1
 		this.data = data
 		this.level = 0
 		this.data.onWindowResize = (x, y) => this._onWindowResize(x, y)
@@ -30,13 +31,14 @@ export default class Game
 	{
 		if (this.level < this.data.information.level)
 		{
-			let levelStep = 5
 			let index = this.levelMax <= this.data.information.level
 				? this.levelMax
 				: this.data.information.level
-			spawnOrder[Random.range(0, (index / levelStep) | 0)]()
+			spawnOrder[Random.range(0, (index / this.levelStep) | 0)]()
 			this.level++
 		}
+		if (Random.random() < 0.001)
+			bonusOrbs[Random.range(0, this.bonusMax)]()
 		this._updateObjects()
 		requestAnimationFrame(() => this.update())
 	}

@@ -30,6 +30,11 @@ export default class Pool
         return obj
     }
 
+    get(i)
+    {
+        return this.objects[i]
+    }
+
     remove(obj)
     {
         let index = this.objects.indexOf(obj)

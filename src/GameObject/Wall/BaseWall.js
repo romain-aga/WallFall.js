@@ -58,7 +58,7 @@ export default class BaseWall extends GameObjectBehavior
 	penalties(self, player)
 	{
 		player.lives--
-		player.stateValues.god = 10
+		player.stateValues.god = 100
 	}
 
 	update(self)

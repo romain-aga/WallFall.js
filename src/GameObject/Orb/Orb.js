@@ -7,7 +7,7 @@ export default class Orb extends BaseOrb
         super.init(self, self.data.orbSprites[1][0], "#ff8e00")
     }
 
-    bonus(self)
+    bonus(self, player)
     {
         self.data.information.level += 1
         self.data.information.score += 10

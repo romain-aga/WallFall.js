@@ -62,7 +62,7 @@ export default class Player extends GameObjectBehavior
             let state = self.specialStates[i]
             if (0 < self.stateValues[state])
             {
-                self.stateValues[state] -= 0.1
+                self.stateValues[state] -= 1
                 self.state = state
                 break
             }
@@ -80,7 +80,7 @@ export default class Player extends GameObjectBehavior
         if (isNaN(mouseX) || isNaN(mouseY))
             return
         self.direction = MathTools.direction(self.x, self.y, mouseX, mouseY)
-        self.speed = MathTools.distance(self.x, self.y, mouseX, mouseY)
+        self.speed = MathTools.squareDistance(self.x, self.y, mouseX, mouseY) / 2500 * self.maxSpeed
         if (self.maxSpeed < self.speed)
             self.speed = self.maxSpeed
         let angle = MathTools.rads(self.direction)

@@ -19,12 +19,14 @@ export default class BaseOrb extends GameObjectBehavior
 		self.height = self.sprite.height
 		self.color = color
         self.isUnique = isUnique
+        self.taken = false
 		this.newCoords(self)
         this.explosion(self)
 	}
 
 	newCoords(self)
 	{
+        self.taken = false
         let findNewCoords = true
         do
         {
@@ -47,7 +49,7 @@ export default class BaseOrb extends GameObjectBehavior
 
 	explosion(self)
 	{
-        New.Explosion(self.x, self.y, self.width, self.color)
+        New.Explosion(self.x, self.y, self.width, self.color, false, ! self.taken && 1)
 	}
 
 	collision(self)
@@ -56,6 +58,7 @@ export default class BaseOrb extends GameObjectBehavior
             p => {
                 if (Collision.circleCircle(self, p))
                 {
+                    self.taken = true
                     this.bonus(self, p)
                     this.explosion(self)
                     if (! self.isUnique)

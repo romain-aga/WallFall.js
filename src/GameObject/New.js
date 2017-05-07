@@ -1,6 +1,15 @@
 import Pool from './Pool'
 import Player from './Player'
 import Orb from './Orb/Orb'
+import BerserkOrb from './Orb/BerserkOrb'
+import DestroyerOrb from './Orb/DestroyerOrb'
+import GodOrb from './Orb/GodOrb'
+import LifeOrb from './Orb/LifeOrb'
+import ScoreOrb from './Orb/ScoreOrb'
+import SlowdownOrb from './Orb/SlowdownOrb'
+import SpeedOrb from './Orb/SpeedOrb'
+import StopOrb from './Orb/StopOrb'
+import TimeOrb from './Orb/TimeOrb'
 import Wall from './Wall/Wall'
 import ImmobileWall from './Wall/ImmobileWall'
 import Particle from './Particle'
@@ -11,12 +20,25 @@ export const spawnOrder = [
     ImmobileWall,
 ]
 
+export const bonusOrbs = [
+    BerserkOrb,
+    DestroyerOrb,
+    GodOrb,
+    LifeOrb,
+    ScoreOrb,
+    //SlowdownOrb,
+    SpeedOrb,
+    //StopOrb,
+    TimeOrb,
+]
+
 const behaviors = [
     Particle,
     Explosion,
     Orb,
     Player,
-    ...spawnOrder
+    ...spawnOrder,
+    ...bonusOrbs
 ]
 
 const New = { init }
@@ -32,6 +54,8 @@ function init(data)
     })
     for (let i = 0; i < spawnOrder.length; ++i)
         spawnOrder[i] = New[spawnOrder[i].name]
+    for (let i = 0; i < bonusOrbs.length; ++i)
+        bonusOrbs[i] = New[bonusOrbs[i].name]
 }
 
 export default New

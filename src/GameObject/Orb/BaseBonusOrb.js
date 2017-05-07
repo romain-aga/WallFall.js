@@ -2,17 +2,28 @@ import BaseOrb from './BaseOrb'
 
 export default class BaseBonusOrb extends BaseOrb
 {
-    init(self, sprite, color)
+    init(self, spriteX, spriteY, color)
     {
-        super.init(self, sprite, color, true)
+        super.init(self, self.data.orbSprites[spriteX][spriteY], color, true)
+        self.lifetime = 500
     }
 
-    bonus(self)
+    update(self)
+    {
+        super.update(self)
+        if (--self.lifetime <= 0)
+            self.destroy()
+    }
+
+    bonus(self, player)
     {
     }
 
     destroy(self)
     {
-        //self.data.sounds.bonusOrb.play()
+        if (! self.taken)
+            this.explosion(self)
+        //else
+            //self.data.sounds.bonusOrb.play()
     }
 }
