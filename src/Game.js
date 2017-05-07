@@ -1,11 +1,14 @@
+import Random from './Tools/Random'
 import Pool from './GameObject/Pool'
-import New from './GameObject/New'
+import New, { spawnOrder } from './GameObject/New'
 
 export default class Game
 {
 	constructor(data)
 	{
 		New.init(data)
+		this.levelStep = 5
+		this.levelMax = (spawnOrder.length - 1) * this.levelStep
 		this.data = data
 		this.level = 0
 		this.data.onWindowResize = (x, y) => this._onWindowResize(x, y)
@@ -25,9 +28,13 @@ export default class Game
 	
 	update()
 	{
-		if (this.level < this.data.information.level | 0)
+		if (this.level < this.data.information.level)
 		{
-			New.ImmobileWall()
+			let levelStep = 5
+			let index = this.levelMax <= this.data.information.level
+				? this.levelMax
+				: this.data.information.level
+			spawnOrder[Random.range(0, (index / levelStep) | 0)]()
 			this.level++
 		}
 		this._updateObjects()

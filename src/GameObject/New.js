@@ -6,13 +6,17 @@ import ImmobileWall from './ImmobileWall'
 import Particle from './Particle'
 import Explosion from './Explosion'
 
+export const spawnOrder = [
+    Wall,
+    ImmobileWall,
+]
+
 const behaviors = [
     Particle,
     Explosion,
     Sphere,
-    ImmobileWall,
-    Wall,
     Player,
+    ...spawnOrder
 ]
 
 const New = { init }
@@ -26,6 +30,8 @@ function init(data)
             || Pool.newPool(instance.poolName, data)
         New[b.name] = (...args) => pool.new(instance, ...args)
     })
+    for (let i = 0; i < spawnOrder.length; ++i)
+        spawnOrder[i] = New[spawnOrder[i].name]
 }
 
 export default New
