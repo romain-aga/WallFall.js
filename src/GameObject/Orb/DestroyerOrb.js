@@ -10,7 +10,7 @@ export default class DestroyerOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        for (let i = 0; i < Pools.Wall.length & i < 3; ++i)
+        for (let i = 0; i < Pools.Wall.length && i < 3; ++i)
             Pools.Wall.get(0).destroy()
     }
 }

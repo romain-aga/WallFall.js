@@ -9,6 +9,6 @@ export default class ScoreOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        self.data.information.score += 100
+        player.score += 100
     }
 }

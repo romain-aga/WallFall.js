@@ -9,7 +9,7 @@ export default class BerserkOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        player.stateValues.berserk += 500
+        player.stateValues.berserk += player.stateDuration
         super.bonus(self, player)
     }
 }

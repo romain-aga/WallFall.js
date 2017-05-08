@@ -9,6 +9,6 @@ export default class GodOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        player.stateValues.god += 500
+        player.stateValues.god += player.stateDuration
     }
 }

@@ -13,6 +13,7 @@ export default class Player extends GameObjectBehavior
         self.maxSpeed = 10
         self.x = self.data.middle.x
         self.y = self.data.middle.y
+        self.stateDuration = 300
         if (! self.sprites)
         {
             self.specialStates = [ 'god', 'berserk', 'inverse' ]
@@ -31,13 +32,23 @@ export default class Player extends GameObjectBehavior
         self.height = self.sprite.height
         self.halfWidth = self.width / 2
         self.halfHeight = self.height / 2
-        self.stateValues.god = 10
+        self.stateValues.god = self.stateDuration / 10
         self.berserk = 0
         self.inverse = 0
         self.lives = 3
         self.score = 0
-        self.countdown = 50000
+        self.time = 60000
+        self.startedAt = new Date().getTime()
+        self.countdown = self.time / 1000
         self.i_particule = 0
+    }
+
+    _updateCountdown(self)
+    {
+        self.score += self.data.frameTime
+        self.countdown = (self.startedAt + self.time - new Date().getTime()) / 1000
+        if (self.countdown < 0)
+            self.countdown = 0
     }
 
     update(self)
@@ -45,11 +56,32 @@ export default class Player extends GameObjectBehavior
         this._updateCoord(self)
         this._updateState(self)
         this._drawQueue(self)
+        this._updateCountdown(self)
+        if (self.lives <= 0 || self.countdown <= 0)
+            self.destroy()
 	}
 	
 	destroy(self)
 	{
-        super.destroy(self)
+        New.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width * 2, self.color, false, 10)
+	}
+
+    updateRectToClean(self, rect)
+	{
+        if (0 < self.lives)
+        {
+            rect.x = (self.x - 1) | 0
+            rect.y = (self.y - 1) | 0
+            rect.w = (self.width + 2) | 0
+            rect.h = (self.height + 2) | 0
+        }
+        else
+        {
+            rect.x = (self.x - self.halfWidth - 1) | 0
+            rect.y = (self.y - self.halfHeight - 1) | 0
+            rect.w = (self.width * 2 + 2) | 0
+            rect.h = (self.height * 2 + 2) | 0
+        }
 	}
 
     _updateState(self)

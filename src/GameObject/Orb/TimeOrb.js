@@ -9,6 +9,6 @@ export default class TimeOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        self.data.information.time += 10000
+        player.time += 30000
     }
 }

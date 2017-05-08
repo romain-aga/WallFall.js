@@ -44,12 +44,11 @@ export default class BaseOrb extends GameObjectBehavior
 
 	bonus(self, player)
 	{
-
 	}
 
 	explosion(self)
 	{
-        New.Explosion(self.x, self.y, self.width, self.color, false, ! self.taken && 1)
+        New.Explosion(self.x, self.y, self.width, self.color, false, (self.taken ? undefined : 1))
 	}
 
 	collision(self)

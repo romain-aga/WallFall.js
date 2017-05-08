@@ -6,6 +6,7 @@ export default class BaseBonusOrb extends BaseOrb
     {
         super.init(self, self.data.orbSprites[spriteX][spriteY], color, true)
         self.lifetime = 500
+        self.data.sounds.orbSpawn.play()
     }
 
     update(self)
@@ -23,7 +24,7 @@ export default class BaseBonusOrb extends BaseOrb
     {
         if (! self.taken)
             this.explosion(self)
-        //else
-            //self.data.sounds.bonusOrb.play()
+        else
+            self.data.sounds.orbBonus.play()
     }
 }

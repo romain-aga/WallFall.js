@@ -1,4 +1,5 @@
 import Tileset from './Tools/Tileset'
+import Settings from './Tools/Settings'
 
 export default class Data
 {
@@ -7,6 +8,7 @@ export default class Data
 		window.onresize = Data._onWindowResize
 		Data._initGameInformation()
 		Data._loadTiles(onInitialized)
+		Data._loadSettings()
 		Data._loadSounds()
 		Data._loadMusics()
 		return Data._getCanvasContext()
@@ -14,26 +16,25 @@ export default class Data
 
 	static _initGameInformation()
 	{
-		Data.information = {
-			score: 0,
-			time: 0,
-			level: 1
-		}
+		Data.information = {}
 	}
 
 	static _loadSounds()
 	{
 		const path = "data/sounds/effects/"
 		Data.sounds = {
-			levelUp: new Audio(path + "level-up.ogg"),
+			gameEnded: new Audio(path + "game-ended.ogg"),
 			gameOver: new Audio(path + "game-over.ogg"),
 			getReady: new Audio(path + "get-ready.ogg"),
+			levelUp: new Audio(path + "level-up.ogg"),
 			wallCollision: new Audio(path + "wall-collision.ogg"),
 			wallExplosion: new Audio(path + "wall-explosion.ogg"),
-			newOrb: new Audio(path + "new-orb.ogg"),
-			bonusOrb: new Audio(path + "bonus-orb.ogg"),
-			slowdownOrb: new Audio(path + "slowdown-orb.ogg"),
+			orbSpawn: new Audio(path + "new-orb.ogg"),
+			orbBonus: new Audio(path + "bonus-orb.ogg"),
+			orbSlowdown: new Audio(path + "slowdown-orb.ogg"),
 		}
+		Object.keys(Data.sounds)
+			.forEach(k => Data.sounds[k].volume = Data.settings.current.effectVolume)
 	}
 
 	static _loadMusics()
@@ -44,7 +45,18 @@ export default class Data
 			new Audio(path + "game/SyncroSonic.ogg"),
 			new Audio(path + "game/beyond black hole (220v).ogg")
 		]
-		Data.musics.menu = new Audio(path + "menu/Check the Map !!.ogg")
+		//Data.musics.menu = new Audio(path + "menu/Check the Map !!.ogg")
+		Data.musics.game
+			.forEach(m => m.volume = Data.settings.current.musicVolume)
+		//Data.musics.menu.volume = Data.settings.current.musicVolume
+	}
+
+	static _loadSettings()
+	{
+		Data.settings = new Settings({
+			effectVolume: 0.0,
+			musicVolume: 0.0
+		})
 	}
 
 	static _getCanvasContext()
@@ -80,6 +92,7 @@ export default class Data
 	{
 		let oldBounds = Data.bounds
 		Data._setScreenConstants(window.innerWidth, window.innerHeight)
+		Data._setTextConstants()
 		Data._resizeBackground()
 		if (Data.onWindowResize)
 			Data.onWindowResize(Data.bounds.x.min - oldBounds.x.min, Data.bounds.y.min - oldBounds.y.min)
@@ -101,6 +114,18 @@ export default class Data
 		}
 		Data.canvas.width = width
 		Data.canvas.height = height
+		
+	}
+
+	static _setTextConstants()
+	{
+		const textSize = 30
+		Data.text = {
+			x: Data.bounds.x.max + Data.borders.x / 10,
+			y: Data.borders.y + textSize,
+			size: textSize,
+			font: textSize + "px Verdana"
+		}
 	}
 
 	static _onMouseMove(event)
@@ -125,6 +150,7 @@ export default class Data
 }
 
 Data.onWindowResize = null
+Data.frameTime = null
 Data.canvasName = "WallFallCanvas"
 Data.width = 700
 Data.height = 700

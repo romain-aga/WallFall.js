@@ -15,12 +15,12 @@ import ImmobileWall from './Wall/ImmobileWall'
 import Particle from './Particle'
 import Explosion from './Explosion'
 
-export const spawnOrder = [
+const walls = [
     Wall,
     ImmobileWall,
 ]
 
-export const bonusOrbs = [
+const orbs = [
     BerserkOrb,
     DestroyerOrb,
     GodOrb,
@@ -37,14 +37,18 @@ const behaviors = [
     Explosion,
     Orb,
     Player,
-    ...spawnOrder,
-    ...bonusOrbs
+    ...walls,
+    ...orbs
 ]
 
 const New = { init }
+const spawnOrder = [ ...walls ]
+const bonusOrbs = [ ...orbs ]
 
 function init(data)
 {
+    if (Pool.pools)
+        Object.keys(Pool.pools).forEach(k => Pool.pools[k].length = 0)
     behaviors.forEach(b =>
     {
         const instance = new b()
@@ -52,10 +56,11 @@ function init(data)
             || Pool.newPool(instance.poolName, data)
         New[b.name] = (...args) => pool.new(instance, ...args)
     })
-    for (let i = 0; i < spawnOrder.length; ++i)
-        spawnOrder[i] = New[spawnOrder[i].name]
-    for (let i = 0; i < bonusOrbs.length; ++i)
-        bonusOrbs[i] = New[bonusOrbs[i].name]
+    for (let i = 0; i < walls.length; ++i)
+        spawnOrder[i] = New[walls[i].name]
+    for (let i = 0; i < orbs.length; ++i)
+        bonusOrbs[i] = New[orbs[i].name]
 }
 
 export default New
+export { spawnOrder, bonusOrbs }

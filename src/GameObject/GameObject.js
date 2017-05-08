@@ -45,12 +45,7 @@ export default class GameObject
 	{
 		this._updateRectToClean()
 		this.behavior.update(this)
-		this.data.context.drawImage(this.data.backgroundCanvas,
-			this._rectToClean.x, this._rectToClean.y,
-			this._rectToClean.w, this._rectToClean.h,
-			this._rectToClean.x, this._rectToClean.y,
-			this._rectToClean.w, this._rectToClean.h
-		)
+		this._cleanDrawing()
 	}
 	
 	draw()
@@ -67,6 +62,7 @@ export default class GameObject
 	destroy()
 	{
 		this.behavior.destroy(this)
+		this._cleanDrawing()
 		this._pool.remove(this)
 		this.behavior = null
 	}
@@ -96,15 +92,30 @@ export default class GameObject
 
 	_updateRectToClean()
 	{
-		this._rectToClean.x = (this.x - 1) | 0
-		this._rectToClean.y = (this.y - 1) | 0
-		this._rectToClean.w = (this.width + 2) | 0
-		this._rectToClean.h = (this.height + 2) | 0
+		if (this.behavior)
+			this.behavior.updateRectToClean(this, this._rectToClean)
+		else
+		{
+			this._rectToClean.x = (this.x - 1) | 0
+			this._rectToClean.y = (this.y - 1) | 0
+			this._rectToClean.w = (this.width + 2) | 0
+			this._rectToClean.h = (this.height + 2) | 0
+		}
 	}
 
 	_updatePrecalcul()
 	{
 		this._precalcul.x_w = this.x + this.width
 		this._precalcul.y_h = this.y + this.height
+	}
+
+	_cleanDrawing()
+	{
+		this.data.context.drawImage(this.data.backgroundCanvas,
+			this._rectToClean.x, this._rectToClean.y,
+			this._rectToClean.w, this._rectToClean.h,
+			this._rectToClean.x, this._rectToClean.y,
+			this._rectToClean.w, this._rectToClean.h
+		)
 	}
 }
