@@ -26,12 +26,13 @@ export default class Data
 			gameEnded: new Audio(path + "game-ended.ogg"),
 			gameOver: new Audio(path + "game-over.ogg"),
 			getReady: new Audio(path + "get-ready.ogg"),
+			lastLife: new Audio(path + "last-life.ogg"),
 			levelUp: new Audio(path + "level-up.ogg"),
 			wallCollision: new Audio(path + "wall-collision.ogg"),
 			wallExplosion: new Audio(path + "wall-explosion.ogg"),
-			orbSpawn: new Audio(path + "new-orb.ogg"),
-			orbBonus: new Audio(path + "bonus-orb.ogg"),
-			orbStop: new Audio(path + "slowdown-orb.ogg"),
+			orbSpawn: new Audio(path + "orb-new.ogg"),
+			orbBonus: new Audio(path + "orb-bonus.ogg"),
+			orbStop: new Audio(path + "orb-stop.ogg"),
 		}
 		Object.keys(Data.sounds)
 			.forEach(k => Data.sounds[k].volume = Data.settings.current.effectVolume)
@@ -54,8 +55,8 @@ export default class Data
 	static _loadSettings()
 	{
 		Data.settings = new Settings({
-			effectVolume: 0.0,
-			musicVolume: 0.0
+			effectVolume: 1.0,
+			musicVolume: 1.0
 		})
 	}
 

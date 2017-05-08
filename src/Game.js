@@ -54,7 +54,7 @@ export default class Game
 		if (this.data.frameTime === null)
 			this._getFrameTime()
 		this._updateLevel()
-		if (Random.random() < Pools.Wall.length / 1000)
+		if (Random.random() < Pools.Wall.length / 10000)
 			this._spawnBonus()
 		Object.keys(this.data.game)
 			.forEach(k => (0 < this.data.game[k]) && (this.data.game[k] -= 1))
@@ -87,7 +87,9 @@ export default class Game
 			(b, p, wLen) => New.BerserkOrb === b && wLen <= 6,
 			(b, p, wLen) => New.DestroyerOrb === b && wLen <= 12,
 			(b, p, wLen) => New.TimeOrb === b && 120 <= p.countdown,
-			(b, p, wLen) => New.SpeedOrb === b && 30 <= p.maxSpeed
+			(b, p, wLen) => New.SpeedOrb === b && 30 <= p.maxSpeed,
+			(b, p, wLen) => (New.StopOrb === b || New.SlowdownOrb === b)
+				&& 0 < this.data.game.stopWall + this.data.game.slowWall
 		]
 	}
 

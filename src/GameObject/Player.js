@@ -41,6 +41,7 @@ export default class Player extends GameObjectBehavior
         self.stateValues.god = self.stateDuration / 10
         self.lives = 3
         self.score = 0
+        self.lastLifeWarned = false
         self.time = this.startTime
         self.startedAt = new Date().getTime()
         self.countdown = self.time / 1000
@@ -114,6 +115,13 @@ export default class Player extends GameObjectBehavior
             New.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width, self.color, false, 2.5)
             self.i_stateExplosion = 0
         }
+        if (1 < self.lives && self.lastLifeWarned)
+            self.lastLifeWarned = false
+        if (self.lives <= 1 && ! self.lastLifeWarned)
+        {
+            self.data.sounds.lastLife.play()
+            self.lastLifeWarned = true
+        }   
         let index = self.states.index[self.state]
         self.sprite = self.sprites[index]
         self.color = self.colors[index]

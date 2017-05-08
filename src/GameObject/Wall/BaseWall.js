@@ -16,6 +16,7 @@ export default class BaseWall extends GameObjectBehavior
 
 	init(self, sprite, color)
 	{
+		self.data.sounds.levelUp.play()
 		self.sprite = sprite
 		self.width = self.sprite.width
 		self.height = self.sprite.height
@@ -24,7 +25,6 @@ export default class BaseWall extends GameObjectBehavior
 		self.color = color
 		self.realSprite = self.sprite
 		self.realColor = self.color
-		//self.data.sounds.levelUp.play()
 		self.i_particle = 0
 		self.i_newCoord = 0
 		self.speed = 2.82
