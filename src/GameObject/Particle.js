@@ -38,8 +38,11 @@ export default class Particle extends GameObjectBehavior
 	{
         self.data.context.fillStyle = self.color
         if (self.isSquare)
-            self.data.context.fillRect(self.x | 0, self.y | 0, self.width | 0, self.height | 0)
-        else
+        {
+            (self._clearScreen = 1 < (self.width | 0) && 1 < (self.height | 0))
+            && self.data.context.fillRect(self.x | 0, self.y | 0, self.width | 0, self.height | 0)
+        }
+        else if ((self._clearScreen = 1 < ((self.radius * 2) | 0)))
         {
             self.data.context.beginPath()
             self.data.context.arc((self.x + self.radius) | 0, (self.y + self.radius) | 0, self.radius, 0, this.fullCircle)

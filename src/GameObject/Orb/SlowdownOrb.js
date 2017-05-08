@@ -4,16 +4,12 @@ export default class SlowdownOrb extends BaseBonusOrb
 {
     init(self)
     {
-        super.init(self, 1, 6, "#6c6c6c")
+        super.init(self, 2, 1, "#17cc71")
+        self.lifetime /= 2
     }
 
     bonus(self, player)
     {
-        
-    }
-
-    destroy(self)
-    {
-        //self.data.sounds.slowdownOrb.play()
+        self.data.game.slowWall += player.stateDuration
     }
 }

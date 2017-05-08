@@ -9,6 +9,6 @@ export default class SpeedOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        player.behavior.maxSpeed += 2
+        player.maxSpeed += 5
     }
 }

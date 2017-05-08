@@ -31,7 +31,7 @@ export default class Data
 			wallExplosion: new Audio(path + "wall-explosion.ogg"),
 			orbSpawn: new Audio(path + "new-orb.ogg"),
 			orbBonus: new Audio(path + "bonus-orb.ogg"),
-			orbSlowdown: new Audio(path + "slowdown-orb.ogg"),
+			orbStop: new Audio(path + "slowdown-orb.ogg"),
 		}
 		Object.keys(Data.sounds)
 			.forEach(k => Data.sounds[k].volume = Data.settings.current.effectVolume)

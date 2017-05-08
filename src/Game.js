@@ -8,11 +8,18 @@ export default class Game
 	constructor(data)
 	{
 		this.data = data
+		this.data.game = {
+			clearScreen: 0,
+			resizeWall: 0,
+			hideWall: 0,
+			stopWall: 0,
+			slowWall: 0
+		}
 		New.init(data)
 		this.stop = false
 		this.pause = false
 		this.ended = false
-		this.levelStep = 10
+		this.levelStep = 5
 		this.levelMax = (spawnOrder.length - 1) * this.levelStep
 		this.bonusMax = bonusOrbs.length - 1
 		this.level = 0
@@ -21,6 +28,7 @@ export default class Game
 		this.music = this.data.musics.game[Random.range(0, this.data.musics.game.length - 1)]
 		this.music.loop = true
 		this._poolValues = Object.keys(Pool.pools).map(k => Pool.pools[k])
+		this._initBonusRules()
 		this._drawBackground()
 	}
 
@@ -30,31 +38,6 @@ export default class Game
 		New.Player()
 		New.Orb()
 		this._loop()
-	}
-
-	_gameInformation()
-	{
-		const getValue = v => () => Pool.pools.Player.get(0)[v]
-		this.data.information = {
-			score: getValue("score"),
-			time: getValue("countdown"),
-			lives: getValue("lives"),
-			level: 1
-		}
-		const contexts = [this.data.background, this.data.context]
-		contexts.forEach(c => {
-			c.font = this.data.text.font
-			c.fillStyle = "black"
-			let y = -this.data.text.size
-			Object.keys(this.data.information)
-				.forEach(
-					k => c.fillText(
-						k + ":",
-						this.data.text.x,
-						this.data.text.y + (y += this.data.text.size)
-					)
-				)
-		})
 	}
 	
 	_loop()
@@ -70,7 +53,47 @@ export default class Game
 	{
 		if (this.data.frameTime === null)
 			this._getFrameTime()
-		if (this.level < this.data.information.level)
+		this._updateLevel()
+		if (Random.random() < Pools.Wall.length / 1000)
+			this._spawnBonus()
+		Object.keys(this.data.game)
+			.forEach(k => (0 < this.data.game[k]) && (this.data.game[k] -= 1))
+		this._poolValues.forEach(p => p.forEach(o => o.update()))
+		this._checkEndGame()
+	}
+
+	_spawnBonus()
+	{
+		let bonus = null
+		let player = Pools.Player.get(0)
+		let wallLength = Pools.Wall.length
+		while (bonus === null)
+		{
+			bonus = bonusOrbs[Random.range(0, this.bonusMax)]
+			for (let i = 0; i < this._bonusRules.length; ++i)
+				if (this._bonusRules[i](bonus, player, wallLength))
+				{
+					bonus = null
+					break
+				}
+		}
+		bonus()
+	}
+
+	_initBonusRules()
+	{
+		this._bonusRules = [
+			(b, p, wLen) => New.LifeOrb === b && 3 <= p.lives,
+			(b, p, wLen) => New.BerserkOrb === b && wLen <= 6,
+			(b, p, wLen) => New.DestroyerOrb === b && wLen <= 12,
+			(b, p, wLen) => New.TimeOrb === b && 120 <= p.countdown,
+			(b, p, wLen) => New.SpeedOrb === b && 30 <= p.maxSpeed
+		]
+	}
+
+	_updateLevel()
+	{
+		if (this.level <= this.data.information.level)
 		{
 			let index = this.levelMax <= this.data.information.level
 				? this.levelMax
@@ -78,30 +101,22 @@ export default class Game
 			spawnOrder[Random.range(0, (index / this.levelStep) | 0)]()
 			this.level++
 		}
-		if (Random.random() < 0.001)
-			bonusOrbs[Random.range(0, this.bonusMax)]()
-		this._poolValues.forEach(p => p.forEach(o => o.update()))
-		this._checkEndGame()
 	}
 
 	_updateGameInformation()
 	{
-		let w = this.data.text.size * 3
-		let x = this.data.text.x + w
-		let y = this.data.text.y - this.data.text.size
-		let h = Object.keys(this.data.information).length * this.data.text.size
 		this.data.context.drawImage(this.data.backgroundCanvas,
-			x, y, w, h,
-			x, y, w, h
+			this.textRect.x, this.textRect.y, this.textRect.w, this.textRect.h,
+			this.textRect.x, this.textRect.y, this.textRect.w, this.textRect.h
 		)
 		this.data.context.font = this.data.text.font
 		this.data.context.fillStyle = "black"
-		y = -this.data.text.size
+		let y = -this.data.text.size
 		Object.keys(this.data.information)
 			.forEach(
 				k => this.data.context.fillText(
 					typeof this.data.information[k] !== 'function'
-						? this.data.information[k]
+						? this.data.information[k] | 0
 						: this.data.information[k]() | 0
 					,
 					this.data.text.x + this.data.text.size * 3,
@@ -135,6 +150,42 @@ export default class Game
 		)
 		this.data.context.drawImage(this.data.backgroundCanvas, 0, 0)
 		this._gameInformation()
+		this._drawGameInformationLabels()
+	}
+
+	_gameInformation()
+	{
+		const getValue = v => () => Pool.pools.Player.get(0)[v]
+		this.data.information = {
+			score: getValue("score"),
+			time: getValue("countdown"),
+			lives: getValue("lives"),
+			level: 0
+		}
+		this.textRect = {
+			x: this.data.text.x + this.data.text.size * 3,
+			y: this.data.text.y - this.data.text.size,
+			h: Object.keys(this.data.information).length * this.data.text.size,
+		}
+		this.textRect.w = this.data.canvas.width - this.textRect.x
+	}
+
+	_drawGameInformationLabels()
+	{
+		const contexts = [this.data.background, this.data.context]
+		contexts.forEach(c => {
+			c.font = this.data.text.font
+			c.fillStyle = "black"
+			let y = -this.data.text.size
+			Object.keys(this.data.information)
+				.forEach(
+					k => c.fillText(
+						k + ":",
+						this.data.text.x,
+						this.data.text.y + (y += this.data.text.size)
+					)
+				)
+		})
 	}
 
 	_checkEndGame()

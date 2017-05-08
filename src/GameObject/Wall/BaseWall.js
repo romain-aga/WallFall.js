@@ -4,12 +4,14 @@ import MathTools from '../../Tools/MathTools'
 import GameObjectBehavior from '../GameObjectBehavior'
 import Pools from '../Pools'
 import New from '../New'
+import Behaviors from '../Behaviors'
 
 export default class BaseWall extends GameObjectBehavior
 {
 	constructor()
 	{
-		super('Wall')
+		super()
+		this.poolName = 'Wall'
 	}
 
 	init(self, sprite, color)
@@ -17,23 +19,27 @@ export default class BaseWall extends GameObjectBehavior
 		self.sprite = sprite
 		self.width = self.sprite.width
 		self.height = self.sprite.height
+		self.halfWidth = self.width / 2
+		self.halfHeight = self.height / 2
 		self.color = color
+		self.realSprite = self.sprite
+		self.realColor = self.color
 		//self.data.sounds.levelUp.play()
 		self.i_particle = 0
 		self.i_newCoord = 0
 		self.speed = 2.82
 		self.coordOffset = 80
-		this.newCoords(self)
-	}
-
-	newCoords(self)
-	{
 		BaseWall._bounds = BaseWall._bounds || [
 			self.data.bounds.x.min - self.width * 2 - self.coordOffset,
 			self.data.bounds.y.max + self.width + self.coordOffset,
 			self.data.bounds.x.max + self.width + self.coordOffset,
 			self.data.bounds.y.min - self.width * 2 - self.coordOffset
 		]
+		this.newCoords(self)
+	}
+
+	newCoords(self)
+	{
 		self.i_newCoord = 5
 		let findNewCoords = true
 		let tries = 10
@@ -56,15 +62,59 @@ export default class BaseWall extends GameObjectBehavior
 	penalties(self, player)
 	{
 		player.lives--
-		player.stateValues.god = player.stateDuration
+		player.stateValues.god = player.stateDuration / 4
 	}
 
 	update(self)
 	{
+		this.special(self)
+		this.changeSpeed(self)
+		this.move(self)
+		this.collision(self)
+		this.particles(self)
+	}
+
+	draw(self)
+	{
+		if (self.data.game.resizeWall <= 0)
+			super.draw(self)
+		else
+		{
+			self.cleanDrawing()
+			self.data.context.drawImage(self.sprite,
+				(self.x + self.halfWidth / 2) | 0,
+				(self.y + self.halfHeight / 2) | 0,
+				self.halfWidth,
+				self.halfHeight
+			)
+		}
+	}
+
+	special(self)
+	{
+		if (self.data.game.hideWall <= 0)
+		{
+			self.color = self.realColor
+			self.sprite = self.realSprite
+		}
+		else
+		{
+			self.color = Behaviors.HideWall.color
+			self.sprite = Behaviors.HideWall.sprite
+		}
+	}
+
+	move(self)
+	{
+		if (0 < self.data.game.stopWall)
+			return
 		let rad = MathTools.rads(self.direction * 90)
 		let cos = Math.cos(rad)
 		let sin = Math.sin(rad)
 		let distanceRespawn = self.data.width / 2 + self.width
+		let speed = self.speed
+		if (30 <= self.data.game.slowWall)
+			speed = speed / self.data.game.slowWall * 30
 		if (self.direction === 0 && self.data.bounds.x.max < self.x
 			|| self.direction === 1 && self.y < self.data.bounds.y.min - self.width
 			|| self.direction === 2 && self.x < self.data.bounds.x.min - self.width
@@ -73,21 +123,20 @@ export default class BaseWall extends GameObjectBehavior
 			this.newCoords(self)
 		else
 		{
-			self.x += cos * self.speed
-			self.y -= sin * self.speed
+			self.x += cos * speed
+			self.y -= sin * speed
 		}
-		this.special(self)
-		this.collision(self)
-		this.particles(self)
 	}
 
-	special(self)
+	changeSpeed(self)
 	{
-
 	}
 
 	explosion(self, particleSpeed)
 	{
+		let color = self.data.game.hideWall <= 0
+			? self.color
+			: Behaviors.HideWall.color
 		New.Explosion(self.x, self.y, self.width, self.color, true, particleSpeed)
 	}
 
@@ -107,6 +156,9 @@ export default class BaseWall extends GameObjectBehavior
 				speed = self.speed * 5
 				decreaseSpeed = 1
 			}
+			let color = self.data.game.hideWall <= 0
+				? self.color
+				: Behaviors.HideWall.color
 			New.Particle(self.x, self.y, direction, speed, self.width, self.color, true, decreaseSpeed)
 		}
 	}
@@ -114,9 +166,9 @@ export default class BaseWall extends GameObjectBehavior
 	collision(self)
 	{
 		Pools.Player.forEach(
-            p => p.state !== p.states.god && Collision.circleRect(p, self)
+            p => (p.stateValues.god <= 0 || 0 < p.stateValues.berserk) && Collision.circleRect(p, self)
 				&& (
-					p.state !== p.states.berserk
+					p.stateValues.berserk <= 0
 					? this.penalties(self, p)
 					: self.destroy() || (p.stateValues.berserk = 0)
 				)
@@ -127,5 +179,13 @@ export default class BaseWall extends GameObjectBehavior
 	{
 		self.data.sounds.wallExplosion.play()
 		this.explosion(self)
+	}
+
+	updateRectToClean(self, rect)
+	{
+		rect.x = (self.x - 3) | 0
+		rect.y = (self.y - 3) | 0
+		rect.w = (self.width + 6) | 0
+		rect.h = (self.height + 6) | 0
 	}
 }

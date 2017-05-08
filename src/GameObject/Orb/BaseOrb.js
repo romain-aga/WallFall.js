@@ -9,7 +9,8 @@ export default class BaseOrb extends GameObjectBehavior
 {
     constructor()
 	{
-		super('Orb')
+		super()
+        this.poolName = 'Orb'
 	}
 
 	init(self, sprite, color, isUnique=false)

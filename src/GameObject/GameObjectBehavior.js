@@ -3,9 +3,9 @@ import Pool from './Pool'
 
 export default class GameObjectBehavior
 {
-	constructor(poolName=this.constructor.name)
+	constructor()
 	{
-		this.poolName = poolName
+		this.poolName = this.constructor.name
 	}
 
 	init(self)

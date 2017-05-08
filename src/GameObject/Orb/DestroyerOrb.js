@@ -6,6 +6,7 @@ export default class DestroyerOrb extends BaseBonusOrb
     init(self)
     {
         super.init(self, 2, 0, "#8300d6")
+        self.lifetime /= 4
     }
 
     bonus(self, player)

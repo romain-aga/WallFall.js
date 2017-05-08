@@ -13,6 +13,7 @@ export default class GameObject
 		this.direction = 0
 		this.speed = 0
 		this.behavior = null
+		this._clearScreen = true
 		this._rectToClean = {}
 		this._precalcul = {}
 		this._updateRectToClean()
@@ -45,7 +46,8 @@ export default class GameObject
 	{
 		this._updateRectToClean()
 		this.behavior.update(this)
-		this._cleanDrawing()
+		if (this.data.game.clearScreen <= 0)
+			this.cleanDrawing()
 	}
 	
 	draw()
@@ -59,10 +61,21 @@ export default class GameObject
 		}
 	}
 	
+	cleanDrawing()
+	{
+		if (this._clearScreen)
+			this.data.context.drawImage(this.data.backgroundCanvas,
+				this._rectToClean.x, this._rectToClean.y,
+				this._rectToClean.w, this._rectToClean.h,
+				this._rectToClean.x, this._rectToClean.y,
+				this._rectToClean.w, this._rectToClean.h
+			)
+	}
+
 	destroy()
 	{
 		this.behavior.destroy(this)
-		this._cleanDrawing()
+		this.cleanDrawing()
 		this._pool.remove(this)
 		this.behavior = null
 	}
@@ -107,15 +120,5 @@ export default class GameObject
 	{
 		this._precalcul.x_w = this.x + this.width
 		this._precalcul.y_h = this.y + this.height
-	}
-
-	_cleanDrawing()
-	{
-		this.data.context.drawImage(this.data.backgroundCanvas,
-			this._rectToClean.x, this._rectToClean.y,
-			this._rectToClean.w, this._rectToClean.h,
-			this._rectToClean.x, this._rectToClean.y,
-			this._rectToClean.w, this._rectToClean.h
-		)
 	}
 }

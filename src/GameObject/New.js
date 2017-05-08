@@ -1,5 +1,9 @@
 import Pool from './Pool'
+import Behaviors from './Behaviors'
 import Player from './Player'
+import Particle from './Particle'
+import Explosion from './Explosion'
+
 import Orb from './Orb/Orb'
 import BerserkOrb from './Orb/BerserkOrb'
 import DestroyerOrb from './Orb/DestroyerOrb'
@@ -10,14 +14,49 @@ import SlowdownOrb from './Orb/SlowdownOrb'
 import SpeedOrb from './Orb/SpeedOrb'
 import StopOrb from './Orb/StopOrb'
 import TimeOrb from './Orb/TimeOrb'
+
 import Wall from './Wall/Wall'
+import BounceWall from './Wall/BounceWall'
+import GameOverWall from './Wall/GameOverWall'
+import HasteWall from './Wall/HasteWall'
+import HideWall from './Wall/HideWall'
+import HugWall from './Wall/HugWall'
 import ImmobileWall from './Wall/ImmobileWall'
-import Particle from './Particle'
-import Explosion from './Explosion'
+import PaintingWall from './Wall/PaintingWall'
+import OnslaughtWall from './Wall/OnslaughtWall'
+import ResizeWall from './Wall/ResizeWall'
+import ReverseWall from './Wall/ReverseWall'
+import ScoreWall from './Wall/ScoreWall'
+import SlowWall from './Wall/SlowWall'
+import SpeedWall from './Wall/SpeedWall'
+import StalkerWall from './Wall/StalkerWall'
+import StraightWall from './Wall/StraightWall'
+import TimeWall from './Wall/TimeWall'
+import TrackerWall from './Wall/TrackerWall'
+import TurnBackWall from './Wall/TurnBackWall'
+import TurtleWall from './Wall/TurtleWall'
 
 const walls = [
     Wall,
     ImmobileWall,
+    BounceWall,
+    HideWall,
+    OnslaughtWall,
+    StalkerWall,
+    TimeWall,
+    ScoreWall,
+    SpeedWall,
+    PaintingWall,
+    HugWall,
+    TurnBackWall,
+    StraightWall,
+    ResizeWall,
+    TurtleWall,
+    SlowWall,
+    HasteWall,
+    TrackerWall,
+    ReverseWall,
+    GameOverWall,
 ]
 
 const orbs = [
@@ -26,9 +65,9 @@ const orbs = [
     GodOrb,
     LifeOrb,
     ScoreOrb,
-    //SlowdownOrb,
+    SlowdownOrb,
     SpeedOrb,
-    //StopOrb,
+    StopOrb,
     TimeOrb,
 ]
 
@@ -51,10 +90,11 @@ function init(data)
         Object.keys(Pool.pools).forEach(k => Pool.pools[k].length = 0)
     behaviors.forEach(b =>
     {
-        const instance = new b()
+        const instance = new b(data)
         const pool = Pool.pools && Pool.pools[instance.poolName]
             || Pool.newPool(instance.poolName, data)
         New[b.name] = (...args) => pool.new(instance, ...args)
+        Behaviors[b.name] = instance
     })
     for (let i = 0; i < walls.length; ++i)
         spawnOrder[i] = New[walls[i].name]

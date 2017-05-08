@@ -7,6 +7,12 @@ import New from './New'
 
 export default class Player extends GameObjectBehavior
 {
+    constructor()
+    {
+        super()
+        this.startTime = 10000
+    }
+
     init(self)
     {
         super.init(self)
@@ -16,7 +22,7 @@ export default class Player extends GameObjectBehavior
         self.stateDuration = 300
         if (! self.sprites)
         {
-            self.specialStates = [ 'god', 'berserk', 'inverse' ]
+            self.specialStates = [ 'god', 'berserk', 'reverse' ]
             self.states = new Enum('normal', 'last', ...self.specialStates)
             self.sprites = []
             for (let i = 0; i < 5; ++i)
@@ -33,14 +39,13 @@ export default class Player extends GameObjectBehavior
         self.halfWidth = self.width / 2
         self.halfHeight = self.height / 2
         self.stateValues.god = self.stateDuration / 10
-        self.berserk = 0
-        self.inverse = 0
         self.lives = 3
         self.score = 0
-        self.time = 60000
+        self.time = this.startTime
         self.startedAt = new Date().getTime()
         self.countdown = self.time / 1000
-        self.i_particule = 0
+        self.i_particle = 0
+        self.i_stateExplosion = 0
     }
 
     _updateCountdown(self)
@@ -57,7 +62,12 @@ export default class Player extends GameObjectBehavior
         this._updateState(self)
         this._drawQueue(self)
         this._updateCountdown(self)
-        if (self.lives <= 0 || self.countdown <= 0)
+        if (self.countdown <= 0)
+        {
+            self.lives--
+            self.time += this.startTime
+        }
+        if (self.lives <= 0)
             self.destroy()
 	}
 	
@@ -89,6 +99,7 @@ export default class Player extends GameObjectBehavior
         self.state = self.lives === 1
             ? self.states.last
             : self.states.normal
+        let normalState = self.state
         for (let i = self.specialStates.length - 1; 0 <= i; --i)
         {
             let state = self.specialStates[i]
@@ -96,8 +107,12 @@ export default class Player extends GameObjectBehavior
             {
                 self.stateValues[state] -= 1
                 self.state = state
-                break
             }
+        }
+        if (self.state !== normalState && self.stateValues[self.state] <= ++self.i_stateExplosion)
+        {
+            New.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width, self.color, false, 2.5)
+            self.i_stateExplosion = 0
         }
         let index = self.states.index[self.state]
         self.sprite = self.sprites[index]
@@ -106,7 +121,7 @@ export default class Player extends GameObjectBehavior
 
     _updateCoord(self)
     {
-        let sens = 1 - (self.inverse > 0) * 2
+        let sens = 1 - +(0 < self.stateValues.reverse) * 2
         let mouseX = self.data.mouseX - self.halfWidth
         let mouseY = self.data.mouseY - self.halfHeight
         if (isNaN(mouseX) || isNaN(mouseY))
@@ -130,7 +145,7 @@ export default class Player extends GameObjectBehavior
 
     _drawQueue(self)
     {
-        if (self.i_particule++ % 2 === 0 && self.speed)
+        if (self.i_particle++ % 2 === 0 && self.speed)
             New.Particle(self.x, self.y, 0, 0, self.width, self.color)
     }
 }
