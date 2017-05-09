@@ -55,8 +55,8 @@ export default class Data
 	static _loadSettings()
 	{
 		Data.settings = new Settings({
-			effectVolume: 1.0,
-			musicVolume: 1.0
+			effectVolume: 0.0,
+			musicVolume: 0.0
 		})
 	}
 
@@ -155,3 +155,4 @@ Data.frameTime = null
 Data.canvasName = "WallFallCanvas"
 Data.width = 700
 Data.height = 700
+Data.now = new Date().getTime()

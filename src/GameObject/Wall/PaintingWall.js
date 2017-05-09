@@ -9,7 +9,7 @@ export default class PaintingWall extends BaseWall
 
     penalties(self, player)
 	{
-        self.data.game.clearScreen += player.stateDuration
+        self.data.game.durations.clearScreen += player.stateDuration
 		super.penalties(self, player)
 	}
 }

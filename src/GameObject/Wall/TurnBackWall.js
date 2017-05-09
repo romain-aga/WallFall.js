@@ -4,7 +4,6 @@ export default class TurnBackWall extends BaseWall
 {
     init(self)
     {
-        self.initialized = undefined
         super.init(self, self.data.wallSprites[0][4], "#514f98")
     }
 
@@ -13,9 +12,6 @@ export default class TurnBackWall extends BaseWall
         if (self.initialized)
             self.direction = (self.direction + 2) % 4
         else
-        {
             super.newCoords(self)
-            self.initialized = true
-        }
     }
 }

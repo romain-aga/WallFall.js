@@ -9,24 +9,30 @@ export default class Game
 	{
 		this.data = data
 		this.data.game = {
-			clearScreen: 0,
-			resizeWall: 0,
-			hideWall: 0,
-			stopWall: 0,
-			slowWall: 0
+			levelStep: 0,
+			durations: {
+				clearScreen: 0,
+				resizeWall: 0,
+				hideWall: 0,
+				stopWall: 0,
+				slowWall: 0
+			}
 		}
 		New.init(data)
 		this.stop = false
 		this.pause = false
 		this.ended = false
-		this.levelStep = 5
-		this.levelMax = (spawnOrder.length - 1) * this.levelStep
+		this.lastBonus = null
+		this.levelStepMax = 5
+		this.levelMax = (spawnOrder.length - 1) * this.levelStepMax
 		this.bonusMax = bonusOrbs.length - 1
-		this.level = 0
+		this.levelStep = 0
 		this.data.onWindowResize = (x, y) => this._onWindowResize(x, y)
 		this.context = data.context
 		this.music = this.data.musics.game[Random.range(0, this.data.musics.game.length - 1)]
 		this.music.loop = true
+		this.previousSecond = this.data.now
+		this.i_background = 0
 		this._poolValues = Object.keys(Pool.pools).map(k => Pool.pools[k])
 		this._initBonusRules()
 		this._drawBackground()
@@ -51,13 +57,16 @@ export default class Game
 
 	_update()
 	{
+		this.data.now = new Date().getTime()
+		// if (1000 <= this.data.now - this.previousSecond)
+		// 	this._updateBackground()
 		if (this.data.frameTime === null)
 			this._getFrameTime()
 		this._updateLevel()
 		if (Random.random() < Pools.Wall.length / 10000)
 			this._spawnBonus()
-		Object.keys(this.data.game)
-			.forEach(k => (0 < this.data.game[k]) && (this.data.game[k] -= 1))
+		Object.keys(this.data.game.durations)
+			.forEach(k => (0 < this.data.game.durations[k]) && (this.data.game.durations[k] -= 1))
 		this._poolValues.forEach(p => p.forEach(o => o.update()))
 		this._checkEndGame()
 	}
@@ -77,31 +86,46 @@ export default class Game
 					break
 				}
 		}
-		bonus()
+		(this.lastBonus = bonus)()
 	}
 
 	_initBonusRules()
 	{
 		this._bonusRules = [
+			(b) => this.lastBonus === b,
 			(b, p, wLen) => New.LifeOrb === b && 3 <= p.lives,
-			(b, p, wLen) => New.BerserkOrb === b && wLen <= 6,
-			(b, p, wLen) => New.DestroyerOrb === b && wLen <= 12,
+			(b, p, wLen) => New.BerserkOrb === b && wLen <= 5,
+			(b, p, wLen) => New.DestroyerOrb === b && wLen <= 10,
 			(b, p, wLen) => New.TimeOrb === b && 120 <= p.countdown,
 			(b, p, wLen) => New.SpeedOrb === b && 30 <= p.maxSpeed,
 			(b, p, wLen) => (New.StopOrb === b || New.SlowdownOrb === b)
-				&& 0 < this.data.game.stopWall + this.data.game.slowWall
+				&& 0 < this.data.game.durations.stopWall + this.data.game.durations.slowWall
 		]
 	}
 
 	_updateLevel()
 	{
-		if (this.level <= this.data.information.level)
+		if (0 < this.data.game.levelStep)
 		{
-			let index = this.levelMax <= this.data.information.level
-				? this.levelMax
-				: this.data.information.level
-			spawnOrder[Random.range(0, (index / this.levelStep) | 0)]()
-			this.level++
+			if (this.levelStep === 0)
+			{
+				let index = this.data.information.level++
+				let lastWall = this.levelMax <= index
+					? spawnOrder.length - 1
+					: (index / this.levelStepMax)
+				if (index % this.levelStepMax === 0)
+					index = lastWall
+				else
+				{
+					index = Random.random() * 100
+					index = 50 < index
+						? lastWall
+						: (index / 50 * lastWall)
+				}
+				spawnOrder[index | 0]()
+			}
+			this.levelStep = (this.levelStep + 1) % this.levelStepMax
+			this.data.game.levelStep--
 		}
 	}
 
@@ -153,6 +177,15 @@ export default class Game
 		this.data.context.drawImage(this.data.backgroundCanvas, 0, 0)
 		this._gameInformation()
 		this._drawGameInformationLabels()
+	}
+
+	_updateBackground()
+	{
+		this.data.background.fillStyle = "black"
+		this.data.background.fillRect(
+			this.data.bounds.x.min, this.data.bounds.y.min,
+			this.data.width, this.data.height
+		)	
 	}
 
 	_gameInformation()

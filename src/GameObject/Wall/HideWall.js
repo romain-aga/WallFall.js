@@ -17,7 +17,7 @@ export default class HideWall extends BaseWall
 
     penalties(self, player)
 	{
-        self.data.game.hideWall += player.stateDuration
+        self.data.game.durations.hideWall += player.stateDuration
 		super.penalties(self, player)
 	}
 }

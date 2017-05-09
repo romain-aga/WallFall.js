@@ -3,6 +3,7 @@ export default class GameObject
 	constructor(pool, data)
 	{
 		this._pool = pool
+		this.initialized = false
 		this.data = data
 		this.x = 0
 		this.y = 0
@@ -39,14 +40,16 @@ export default class GameObject
 	init(behavior, ...args)
 	{
 		this.behavior = behavior
+		this.initialized = false
 		this.behavior.init(this, ...args)
+		this.initialized = true
 	}
 	
 	update()
 	{
 		this._updateRectToClean()
 		this.behavior.update(this)
-		if (this.data.game.clearScreen <= 0)
+		if (this.data.game.durations.clearScreen <= 0)
 			this.cleanDrawing()
 	}
 	

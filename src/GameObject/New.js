@@ -38,8 +38,8 @@ import TurtleWall from './Wall/TurtleWall'
 
 const walls = [
     Wall,
-    ImmobileWall,
     BounceWall,
+    ImmobileWall,
     HideWall,
     OnslaughtWall,
     StalkerWall,
