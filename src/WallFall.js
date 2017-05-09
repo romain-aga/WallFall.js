@@ -20,7 +20,7 @@ export default class WallFall
 			this.game.pause = ! this.game.pause
 		if (event.keyCode == 13)
 		{
-			this.game.stop = true
+			this.game.stop()
 			this.game = new Game(this.data)
 			this.run()
 		}

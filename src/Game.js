@@ -19,7 +19,7 @@ export default class Game
 			}
 		}
 		New.init(data)
-		this.stop = false
+		this._stop = false
 		this.pause = false
 		this.ended = false
 		this.lastBonus = null
@@ -45,13 +45,20 @@ export default class Game
 		New.Orb()
 		this._loop()
 	}
+
+	stop()
+	{
+		this._stop = true
+		this.music.pause()
+		this.music.currentTime = 0
+	}
 	
 	_loop()
 	{
 		if (! this.pause)
 			this._update()
 		this._draw()
-		if (! this.stop)
+		if (! this._stop)
 			requestAnimationFrame(() => this._loop())
 	}
 
@@ -156,9 +163,9 @@ export default class Game
 	_getFrameTime()
 	{
 		if (this._frameStart)
-			this.data.frameTime = (new Date().getTime() - this._frameStart) / 1000
+			this.data.frameTime = (this.data.now - this._frameStart) / 1000
 		else
-			this._frameStart = new Date().getTime()
+			this._frameStart = this.data.now
 	}
 
 	_draw()
