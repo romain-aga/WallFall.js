@@ -891,7 +891,7 @@ var GameObject = function () {
 				y = this.data.bounds.y.max;
 				h = this._precalcul.y_h - this.data.bounds.y.max | 0;
 			}
-			this.data.context.drawImage(this.data.backgroundCanvas, x, y, w, h, x, y, w, h);
+			if (w && h) this.data.context.drawImage(this.data.backgroundCanvas, x, y, w, h, x, y, w, h);
 		}
 	}, {
 		key: '_updateRectToClean',
