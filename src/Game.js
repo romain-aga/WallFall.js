@@ -105,28 +105,30 @@ export default class Game
 
 	_updateLevel()
 	{
-		if (0 < this.data.game.levelStep)
+		if (this.data.game.levelStep <= 0)
+			return
+		if (this.levelStep === 0)
 		{
-			if (this.levelStep === 0)
+			let index = this.data.information.level++
+			let lastWall = this.levelMax <= index
+				? spawnOrder.length - 1
+				: (index / this.levelStepMax)
+			if (index % this.levelStepMax === 0)
 			{
-				let index = this.data.information.level++
-				let lastWall = this.levelMax <= index
-					? spawnOrder.length - 1
-					: (index / this.levelStepMax)
-				if (index % this.levelStepMax === 0)
-					index = lastWall
-				else
-				{
-					index = Random.random() * 100
-					index = 50 < index
-						? lastWall
-						: (index / 50 * lastWall)
-				}
-				spawnOrder[index | 0]()
+				index = lastWall
+				this.data.sounds.levelUp.play()
 			}
-			this.levelStep = (this.levelStep + 1) % this.levelStepMax
-			this.data.game.levelStep--
+			else
+			{
+				index = Random.random() * 100
+				index = 50 < index
+					? lastWall
+					: (index / 50 * lastWall)
+			}
+			spawnOrder[index | 0]()
 		}
+		this.levelStep = (this.levelStep + 1) % this.levelStepMax
+		this.data.game.levelStep--
 	}
 
 	_updateGameInformation()
