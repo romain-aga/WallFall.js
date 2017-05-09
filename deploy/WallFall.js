@@ -401,7 +401,7 @@ var Game = function () {
 			}
 		};
 		_New2.default.init(data);
-		this.stop = false;
+		this._stop = false;
 		this.pause = false;
 		this.ended = false;
 		this.lastBonus = null;
@@ -433,13 +433,20 @@ var Game = function () {
 			this._loop();
 		}
 	}, {
+		key: 'stop',
+		value: function stop() {
+			this._stop = true;
+			this.music.pause();
+			this.music.currentTime = 0;
+		}
+	}, {
 		key: '_loop',
 		value: function _loop() {
 			var _this2 = this;
 
 			if (!this.pause) this._update();
 			this._draw();
-			if (!this.stop) requestAnimationFrame(function () {
+			if (!this._stop) requestAnimationFrame(function () {
 				return _this2._loop();
 			});
 		}
@@ -537,7 +544,7 @@ var Game = function () {
 	}, {
 		key: '_getFrameTime',
 		value: function _getFrameTime() {
-			if (this._frameStart) this.data.frameTime = (new Date().getTime() - this._frameStart) / 1000;else this._frameStart = new Date().getTime();
+			if (this._frameStart) this.data.frameTime = (this.data.now - this._frameStart) / 1000;else this._frameStart = this.data.now;
 		}
 	}, {
 		key: '_draw',
@@ -5584,7 +5591,7 @@ var WallFall = function () {
 		value: function _onKeyUp(event) {
 			if (event.keyCode == 27) this.game.pause = !this.game.pause;
 			if (event.keyCode == 13) {
-				this.game.stop = true;
+				this.game.stop();
 				this.game = new _Game2.default(this.data);
 				this.run();
 			}
