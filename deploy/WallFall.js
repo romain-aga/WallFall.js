@@ -239,8 +239,8 @@ var Data = function () {
 		key: '_loadSettings',
 		value: function _loadSettings() {
 			Data.settings = new _Settings2.default({
-				effectVolume: 0.0,
-				musicVolume: 0.0
+				effectVolume: 1.0,
+				musicVolume: 1.0
 			});
 		}
 	}, {
