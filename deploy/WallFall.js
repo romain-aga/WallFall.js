@@ -505,19 +505,21 @@ var Game = function () {
 	}, {
 		key: '_updateLevel',
 		value: function _updateLevel() {
-			if (0 < this.data.game.levelStep) {
-				if (this.levelStep === 0) {
-					var index = this.data.information.level++;
-					var lastWall = this.levelMax <= index ? _New.spawnOrder.length - 1 : index / this.levelStepMax;
-					if (index % this.levelStepMax === 0) index = lastWall;else {
-						index = _Random2.default.random() * 100;
-						index = 50 < index ? lastWall : index / 50 * lastWall;
-					}
-					_New.spawnOrder[index | 0]();
+			if (this.data.game.levelStep <= 0) return;
+			if (this.levelStep === 0) {
+				var index = this.data.information.level++;
+				var lastWall = this.levelMax <= index ? _New.spawnOrder.length - 1 : index / this.levelStepMax;
+				if (index % this.levelStepMax === 0) {
+					index = lastWall;
+					this.data.sounds.levelUp.play();
+				} else {
+					index = _Random2.default.random() * 100;
+					index = 50 < index ? lastWall : index / 50 * lastWall;
 				}
-				this.levelStep = (this.levelStep + 1) % this.levelStepMax;
-				this.data.game.levelStep--;
+				_New.spawnOrder[index | 0]();
 			}
+			this.levelStep = (this.levelStep + 1) % this.levelStepMax;
+			this.data.game.levelStep--;
 		}
 	}, {
 		key: '_updateGameInformation',
