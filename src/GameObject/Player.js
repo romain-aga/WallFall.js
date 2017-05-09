@@ -43,7 +43,7 @@ export default class Player extends GameObjectBehavior
         self.score = 0
         self.lastLifeWarned = false
         self.time = this.startTime
-        self.startedAt = new Date().getTime()
+        self.startedAt = self.data.now
         self.countdown = self.time / 1000
         self.i_particle = 0
         self.i_stateExplosion = 0
@@ -52,7 +52,7 @@ export default class Player extends GameObjectBehavior
     _updateCountdown(self)
     {
         self.score += self.data.frameTime
-        self.countdown = (self.startedAt + self.time - new Date().getTime()) / 1000
+        self.countdown = (self.startedAt + self.time - self.data.now) / 1000
         if (self.countdown < 0)
             self.countdown = 0
     }

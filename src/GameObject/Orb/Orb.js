@@ -21,7 +21,7 @@ export default class Orb extends BaseOrb
 
     bonus(self, player)
     {
-        self.data.information.level += 0.2
+        self.data.game.levelStep++
         player.score += this.score
         player.time += this.time
         if (self.previousCountdown != null)

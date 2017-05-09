@@ -9,7 +9,7 @@ export default class ResizeWall extends BaseWall
 
     penalties(self, player)
 	{
-        self.data.game.resizeWall += player.stateDuration
+        self.data.game.durations.resizeWall += player.stateDuration
 		super.penalties(self, player)
 	}
 

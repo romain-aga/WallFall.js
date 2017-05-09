@@ -10,6 +10,6 @@ export default class SlowdownOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        self.data.game.slowWall += player.stateDuration
+        self.data.game.durations.slowWall += player.stateDuration
     }
 }

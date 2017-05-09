@@ -16,7 +16,6 @@ export default class BaseWall extends GameObjectBehavior
 
 	init(self, sprite, color)
 	{
-		self.data.sounds.levelUp.play()
 		self.sprite = sprite
 		self.width = self.sprite.width
 		self.height = self.sprite.height
@@ -76,7 +75,7 @@ export default class BaseWall extends GameObjectBehavior
 
 	draw(self)
 	{
-		if (self.data.game.resizeWall <= 0)
+		if (self.data.game.durations.resizeWall <= 0)
 			super.draw(self)
 		else
 		{
@@ -92,7 +91,7 @@ export default class BaseWall extends GameObjectBehavior
 
 	special(self)
 	{
-		if (self.data.game.hideWall <= 0)
+		if (self.data.game.durations.hideWall <= 0)
 		{
 			self.color = self.realColor
 			self.sprite = self.realSprite
@@ -106,15 +105,15 @@ export default class BaseWall extends GameObjectBehavior
 
 	move(self)
 	{
-		if (0 < self.data.game.stopWall)
+		if (0 < self.data.game.durations.stopWall)
 			return
 		let rad = MathTools.rads(self.direction * 90)
 		let cos = Math.cos(rad)
 		let sin = Math.sin(rad)
 		let distanceRespawn = self.data.width / 2 + self.width
 		let speed = self.speed
-		if (30 <= self.data.game.slowWall)
-			speed = speed / self.data.game.slowWall * 30
+		if (30 <= self.data.game.durations.slowWall)
+			speed = speed / self.data.game.durations.slowWall * 30
 		if (self.direction === 0 && self.data.bounds.x.max < self.x
 			|| self.direction === 1 && self.y < self.data.bounds.y.min - self.width
 			|| self.direction === 2 && self.x < self.data.bounds.x.min - self.width
@@ -134,7 +133,7 @@ export default class BaseWall extends GameObjectBehavior
 
 	explosion(self, particleSpeed)
 	{
-		let color = self.data.game.hideWall <= 0
+		let color = self.data.game.durations.hideWall <= 0
 			? self.color
 			: Behaviors.HideWall.color
 		New.Explosion(self.x, self.y, self.width, self.color, true, particleSpeed)
@@ -156,7 +155,7 @@ export default class BaseWall extends GameObjectBehavior
 				speed = self.speed * 5
 				decreaseSpeed = 1
 			}
-			let color = self.data.game.hideWall <= 0
+			let color = self.data.game.durations.hideWall <= 0
 				? self.color
 				: Behaviors.HideWall.color
 			New.Particle(self.x, self.y, direction, speed, self.width, self.color, true, decreaseSpeed)

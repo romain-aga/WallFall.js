@@ -9,7 +9,7 @@ export default class StopOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        self.data.game.stopWall += player.stateDuration
+        self.data.game.durations.stopWall += player.stateDuration
     }
 
     destroy(self)
