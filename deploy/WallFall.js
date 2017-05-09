@@ -239,8 +239,8 @@ var Data = function () {
 		key: '_loadSettings',
 		value: function _loadSettings() {
 			Data.settings = new _Settings2.default({
-				effectVolume: 1.0,
-				musicVolume: 1.0
+				effectVolume: 0.0,
+				musicVolume: 0.0
 			});
 		}
 	}, {
@@ -336,6 +336,7 @@ Data.frameTime = null;
 Data.canvasName = "WallFallCanvas";
 Data.width = 700;
 Data.height = 700;
+Data.now = new Date().getTime();
 
 });
 
@@ -390,26 +391,32 @@ var Game = function () {
 
 		this.data = data;
 		this.data.game = {
-			clearScreen: 0,
-			resizeWall: 0,
-			hideWall: 0,
-			stopWall: 0,
-			slowWall: 0
+			levelStep: 0,
+			durations: {
+				clearScreen: 0,
+				resizeWall: 0,
+				hideWall: 0,
+				stopWall: 0,
+				slowWall: 0
+			}
 		};
 		_New2.default.init(data);
 		this.stop = false;
 		this.pause = false;
 		this.ended = false;
-		this.levelStep = 5;
-		this.levelMax = (_New.spawnOrder.length - 1) * this.levelStep;
+		this.lastBonus = null;
+		this.levelStepMax = 5;
+		this.levelMax = (_New.spawnOrder.length - 1) * this.levelStepMax;
 		this.bonusMax = _New.bonusOrbs.length - 1;
-		this.level = 0;
+		this.levelStep = 0;
 		this.data.onWindowResize = function (x, y) {
 			return _this._onWindowResize(x, y);
 		};
 		this.context = data.context;
 		this.music = this.data.musics.game[_Random2.default.range(0, this.data.musics.game.length - 1)];
 		this.music.loop = true;
+		this.previousSecond = this.data.now;
+		this.i_background = 0;
 		this._poolValues = Object.keys(_Pool2.default.pools).map(function (k) {
 			return _Pool2.default.pools[k];
 		});
@@ -441,11 +448,14 @@ var Game = function () {
 		value: function _update() {
 			var _this3 = this;
 
+			this.data.now = new Date().getTime();
+			// if (1000 <= this.data.now - this.previousSecond)
+			// 	this._updateBackground()
 			if (this.data.frameTime === null) this._getFrameTime();
 			this._updateLevel();
 			if (_Random2.default.random() < _Pools2.default.Wall.length / 10000) this._spawnBonus();
-			Object.keys(this.data.game).forEach(function (k) {
-				return 0 < _this3.data.game[k] && (_this3.data.game[k] -= 1);
+			Object.keys(this.data.game.durations).forEach(function (k) {
+				return 0 < _this3.data.game.durations[k] && (_this3.data.game.durations[k] -= 1);
 			});
 			this._poolValues.forEach(function (p) {
 				return p.forEach(function (o) {
@@ -469,34 +479,44 @@ var Game = function () {
 					}
 				}
 			}
-			bonus();
+			(this.lastBonus = bonus)();
 		}
 	}, {
 		key: '_initBonusRules',
 		value: function _initBonusRules() {
 			var _this4 = this;
 
-			this._bonusRules = [function (b, p, wLen) {
+			this._bonusRules = [function (b) {
+				return _this4.lastBonus === b;
+			}, function (b, p, wLen) {
 				return _New2.default.LifeOrb === b && 3 <= p.lives;
 			}, function (b, p, wLen) {
-				return _New2.default.BerserkOrb === b && wLen <= 6;
+				return _New2.default.BerserkOrb === b && wLen <= 5;
 			}, function (b, p, wLen) {
-				return _New2.default.DestroyerOrb === b && wLen <= 12;
+				return _New2.default.DestroyerOrb === b && wLen <= 10;
 			}, function (b, p, wLen) {
 				return _New2.default.TimeOrb === b && 120 <= p.countdown;
 			}, function (b, p, wLen) {
 				return _New2.default.SpeedOrb === b && 30 <= p.maxSpeed;
 			}, function (b, p, wLen) {
-				return (_New2.default.StopOrb === b || _New2.default.SlowdownOrb === b) && 0 < _this4.data.game.stopWall + _this4.data.game.slowWall;
+				return (_New2.default.StopOrb === b || _New2.default.SlowdownOrb === b) && 0 < _this4.data.game.durations.stopWall + _this4.data.game.durations.slowWall;
 			}];
 		}
 	}, {
 		key: '_updateLevel',
 		value: function _updateLevel() {
-			if (this.level <= this.data.information.level) {
-				var index = this.levelMax <= this.data.information.level ? this.levelMax : this.data.information.level;
-				_New.spawnOrder[_Random2.default.range(0, index / this.levelStep | 0)]();
-				this.level++;
+			if (0 < this.data.game.levelStep) {
+				if (this.levelStep === 0) {
+					var index = this.data.information.level++;
+					var lastWall = this.levelMax <= index ? _New.spawnOrder.length - 1 : index / this.levelStepMax;
+					if (index % this.levelStepMax === 0) index = lastWall;else {
+						index = _Random2.default.random() * 100;
+						index = 50 < index ? lastWall : index / 50 * lastWall;
+					}
+					_New.spawnOrder[index | 0]();
+				}
+				this.levelStep = (this.levelStep + 1) % this.levelStepMax;
+				this.data.game.levelStep--;
 			}
 		}
 	}, {
@@ -537,6 +557,12 @@ var Game = function () {
 			this.data.context.drawImage(this.data.backgroundCanvas, 0, 0);
 			this._gameInformation();
 			this._drawGameInformationLabels();
+		}
+	}, {
+		key: '_updateBackground',
+		value: function _updateBackground() {
+			this.data.background.fillStyle = "black";
+			this.data.background.fillRect(this.data.bounds.x.min, this.data.bounds.y.min, this.data.width, this.data.height);
 		}
 	}, {
 		key: '_gameInformation',
@@ -774,6 +800,7 @@ var GameObject = function () {
 		_classCallCheck(this, GameObject);
 
 		this._pool = pool;
+		this.initialized = false;
 		this.data = data;
 		this.x = 0;
 		this.y = 0;
@@ -807,19 +834,21 @@ var GameObject = function () {
 			var _behavior;
 
 			this.behavior = behavior;
+			this.initialized = false;
 
 			for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
 				args[_key - 1] = arguments[_key];
 			}
 
 			(_behavior = this.behavior).init.apply(_behavior, [this].concat(args));
+			this.initialized = true;
 		}
 	}, {
 		key: 'update',
 		value: function update() {
 			this._updateRectToClean();
 			this.behavior.update(this);
-			if (this.data.game.clearScreen <= 0) this.cleanDrawing();
+			if (this.data.game.durations.clearScreen <= 0) this.cleanDrawing();
 		}
 	}, {
 		key: 'draw',
@@ -1118,7 +1147,7 @@ function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : { default: obj };
 }
 
-var walls = [_Wall2.default, _ImmobileWall2.default, _BounceWall2.default, _HideWall2.default, _OnslaughtWall2.default, _StalkerWall2.default, _TimeWall2.default, _ScoreWall2.default, _SpeedWall2.default, _PaintingWall2.default, _HugWall2.default, _TurnBackWall2.default, _StraightWall2.default, _ResizeWall2.default, _TurtleWall2.default, _SlowWall2.default, _HasteWall2.default, _TrackerWall2.default, _ReverseWall2.default, _GameOverWall2.default];
+var walls = [_Wall2.default, _BounceWall2.default, _ImmobileWall2.default, _HideWall2.default, _OnslaughtWall2.default, _StalkerWall2.default, _TimeWall2.default, _ScoreWall2.default, _SpeedWall2.default, _PaintingWall2.default, _HugWall2.default, _TurnBackWall2.default, _StraightWall2.default, _ResizeWall2.default, _TurtleWall2.default, _SlowWall2.default, _HasteWall2.default, _TrackerWall2.default, _ReverseWall2.default, _GameOverWall2.default];
 
 var orbs = [_BerserkOrb2.default, _DestroyerOrb2.default, _GodOrb2.default, _LifeOrb2.default, _ScoreOrb2.default, _SlowdownOrb2.default, _SpeedOrb2.default, _StopOrb2.default, _TimeOrb2.default];
 
@@ -1853,7 +1882,7 @@ var Orb = function (_BaseOrb) {
     }, {
         key: 'bonus',
         value: function bonus(self, player) {
-            self.data.information.level += 0.2;
+            self.data.game.levelStep++;
             player.score += this.score;
             player.time += this.time;
             if (self.previousCountdown != null) {
@@ -2044,7 +2073,7 @@ var SlowdownOrb = function (_BaseBonusOrb) {
     }, {
         key: "bonus",
         value: function bonus(self, player) {
-            self.data.game.slowWall += player.stateDuration;
+            self.data.game.durations.slowWall += player.stateDuration;
         }
     }]);
 
@@ -2222,7 +2251,7 @@ var StopOrb = function (_BaseBonusOrb) {
     }, {
         key: "bonus",
         value: function bonus(self, player) {
-            self.data.game.stopWall += player.stateDuration;
+            self.data.game.durations.stopWall += player.stateDuration;
         }
     }, {
         key: "destroy",
@@ -2576,7 +2605,7 @@ var Player = function (_GameObjectBehavior) {
             self.score = 0;
             self.lastLifeWarned = false;
             self.time = this.startTime;
-            self.startedAt = new Date().getTime();
+            self.startedAt = self.data.now;
             self.countdown = self.time / 1000;
             self.i_particle = 0;
             self.i_stateExplosion = 0;
@@ -2585,7 +2614,7 @@ var Player = function (_GameObjectBehavior) {
         key: '_updateCountdown',
         value: function _updateCountdown(self) {
             self.score += self.data.frameTime;
-            self.countdown = (self.startedAt + self.time - new Date().getTime()) / 1000;
+            self.countdown = (self.startedAt + self.time - self.data.now) / 1000;
             if (self.countdown < 0) self.countdown = 0;
         }
     }, {
@@ -2889,7 +2918,6 @@ var BaseWall = function (_GameObjectBehavior) {
 	_createClass(BaseWall, [{
 		key: 'init',
 		value: function init(self, sprite, color) {
-			self.data.sounds.levelUp.play();
 			self.sprite = sprite;
 			self.width = self.sprite.width;
 			self.height = self.sprite.height;
@@ -2939,7 +2967,7 @@ var BaseWall = function (_GameObjectBehavior) {
 	}, {
 		key: 'draw',
 		value: function draw(self) {
-			if (self.data.game.resizeWall <= 0) _get(BaseWall.prototype.__proto__ || Object.getPrototypeOf(BaseWall.prototype), 'draw', this).call(this, self);else {
+			if (self.data.game.durations.resizeWall <= 0) _get(BaseWall.prototype.__proto__ || Object.getPrototypeOf(BaseWall.prototype), 'draw', this).call(this, self);else {
 				self.cleanDrawing();
 				self.data.context.drawImage(self.sprite, self.x + self.halfWidth / 2 | 0, self.y + self.halfHeight / 2 | 0, self.halfWidth, self.halfHeight);
 			}
@@ -2947,7 +2975,7 @@ var BaseWall = function (_GameObjectBehavior) {
 	}, {
 		key: 'special',
 		value: function special(self) {
-			if (self.data.game.hideWall <= 0) {
+			if (self.data.game.durations.hideWall <= 0) {
 				self.color = self.realColor;
 				self.sprite = self.realSprite;
 			} else {
@@ -2958,13 +2986,13 @@ var BaseWall = function (_GameObjectBehavior) {
 	}, {
 		key: 'move',
 		value: function move(self) {
-			if (0 < self.data.game.stopWall) return;
+			if (0 < self.data.game.durations.stopWall) return;
 			var rad = _MathTools2.default.rads(self.direction * 90);
 			var cos = Math.cos(rad);
 			var sin = Math.sin(rad);
 			var distanceRespawn = self.data.width / 2 + self.width;
 			var speed = self.speed;
-			if (30 <= self.data.game.slowWall) speed = speed / self.data.game.slowWall * 30;
+			if (30 <= self.data.game.durations.slowWall) speed = speed / self.data.game.durations.slowWall * 30;
 			if (self.direction === 0 && self.data.bounds.x.max < self.x || self.direction === 1 && self.y < self.data.bounds.y.min - self.width || self.direction === 2 && self.x < self.data.bounds.x.min - self.width || self.direction === 3 && self.data.bounds.y.max < self.y) this.newCoords(self);else {
 				self.x += cos * speed;
 				self.y -= sin * speed;
@@ -2976,7 +3004,7 @@ var BaseWall = function (_GameObjectBehavior) {
 	}, {
 		key: 'explosion',
 		value: function explosion(self, particleSpeed) {
-			var color = self.data.game.hideWall <= 0 ? self.color : _Behaviors2.default.HideWall.color;
+			var color = self.data.game.durations.hideWall <= 0 ? self.color : _Behaviors2.default.HideWall.color;
 			_New2.default.Explosion(self.x, self.y, self.width, self.color, true, particleSpeed);
 		}
 	}, {
@@ -2993,7 +3021,7 @@ var BaseWall = function (_GameObjectBehavior) {
 					speed = self.speed * 5;
 					decreaseSpeed = 1;
 				}
-				var color = self.data.game.hideWall <= 0 ? self.color : _Behaviors2.default.HideWall.color;
+				var color = self.data.game.durations.hideWall <= 0 ? self.color : _Behaviors2.default.HideWall.color;
 				_New2.default.Particle(self.x, self.y, direction, speed, self.width, self.color, true, decreaseSpeed);
 			}
 		}
@@ -3412,7 +3440,7 @@ var HideWall = function (_BaseWall) {
     }, {
         key: "penalties",
         value: function penalties(self, player) {
-            self.data.game.hideWall += player.stateDuration;
+            self.data.game.durations.hideWall += player.stateDuration;
             _get(HideWall.prototype.__proto__ || Object.getPrototypeOf(HideWall.prototype), "penalties", this).call(this, self, player);
         }
     }]);
@@ -3733,13 +3761,14 @@ var OnslaughtWall = function (_BaseWall) {
             _get(OnslaughtWall.prototype.__proto__ || Object.getPrototypeOf(OnslaughtWall.prototype), 'init', this).call(this, self, self.data.wallSprites[1][2], "#2903fe");
             self.maxSpeed = self.speed * 2;
             self.minSpeed = self.speed / 2;
+            if (self.speed !== 2.82) console.log(self.previousBehaviorName, self.speed);
             self.speed = self.minSpeed;
         }
     }, {
         key: 'newCoords',
         value: function newCoords(self) {
             _get(OnslaughtWall.prototype.__proto__ || Object.getPrototypeOf(OnslaughtWall.prototype), 'newCoords', this).call(this, self);
-            if (self.minSpeed) self.speed = self.minSpeed;
+            if (self.initialized) self.speed = self.minSpeed;
             this._updateDetectionRect(self);
         }
     }, {
@@ -3850,7 +3879,7 @@ var PaintingWall = function (_BaseWall) {
     }, {
         key: "penalties",
         value: function penalties(self, player) {
-            self.data.game.clearScreen += player.stateDuration;
+            self.data.game.durations.clearScreen += player.stateDuration;
             _get(PaintingWall.prototype.__proto__ || Object.getPrototypeOf(PaintingWall.prototype), "penalties", this).call(this, self, player);
         }
     }]);
@@ -3940,7 +3969,7 @@ var ResizeWall = function (_BaseWall) {
     }, {
         key: "penalties",
         value: function penalties(self, player) {
-            self.data.game.resizeWall += player.stateDuration;
+            self.data.game.durations.resizeWall += player.stateDuration;
             _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), "penalties", this).call(this, self, player);
         }
     }, {
@@ -4775,16 +4804,12 @@ var TurnBackWall = function (_BaseWall) {
     _createClass(TurnBackWall, [{
         key: "init",
         value: function init(self) {
-            self.initialized = undefined;
             _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), "init", this).call(this, self, self.data.wallSprites[0][4], "#514f98");
         }
     }, {
         key: "newCoords",
         value: function newCoords(self) {
-            if (self.initialized) self.direction = (self.direction + 2) % 4;else {
-                _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), "newCoords", this).call(this, self);
-                self.initialized = true;
-            }
+            if (self.initialized) self.direction = (self.direction + 2) % 4;else _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), "newCoords", this).call(this, self);
         }
     }]);
 
