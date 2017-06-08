@@ -1,5 +1,6 @@
+'use strict'
+
 import Random from '../../Tools/Random'
-import MathTools from '../../Tools/MathTools'
 import Collision from '../../Tools/Collision'
 import GameObjectBehavior from '../GameObjectBehavior'
 import Pools from '../Pools'

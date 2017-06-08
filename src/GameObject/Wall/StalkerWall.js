@@ -1,3 +1,5 @@
+'use strict'
+
 import Random from '../../Tools/Random'
 import Pools from '../Pools'
 import BaseWall from './BaseWall'

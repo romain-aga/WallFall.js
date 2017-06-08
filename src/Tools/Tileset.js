@@ -1,3 +1,5 @@
+'use strict'
+
 import ImageHelper from './ImageHelper'
 
 export default class Tileset

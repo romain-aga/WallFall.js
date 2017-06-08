@@ -1,5 +1,6 @@
+'use strict'
+
 import MathTools from '../Tools/MathTools'
-import Pool from './Pool'
 
 export default class GameObjectBehavior
 {

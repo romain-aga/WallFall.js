@@ -1,3 +1,5 @@
+'use strict'
+
 export default class Color
 {
     static rgbToHex(r, g, b)

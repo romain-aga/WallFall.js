@@ -1,3 +1,5 @@
+'use strict'
+
 import Pools from './Pools'
 import GameObject from './GameObject'
 

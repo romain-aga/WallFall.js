@@ -1,3 +1,5 @@
+'use strict'
+
 import MathTools from '../Tools/MathTools'
 import Color from '../Tools/Color'
 import Random from '../Tools/Random'

@@ -1,3 +1,5 @@
+'use strict'
+
 import Pool from './Pool'
 import Behaviors from './Behaviors'
 import Player from './Player'
