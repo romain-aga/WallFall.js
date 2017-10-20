@@ -6,6 +6,7 @@ export default class Data
 	static init(onInitialized)
 	{
 		window.onresize = Data._onWindowResize
+		Data.complete = false
 		Data._initGameInformation()
 		Data._loadTiles(onInitialized)
 		Data._loadSettings()
@@ -132,19 +133,45 @@ export default class Data
 	static _onMouseMove(event)
 	{
 		let rect = Data.canvas.getBoundingClientRect();
-		Data.mouseX = event.pageX - window.pageXOffset - rect.left;
-		Data.mouseY = event.pageY - window.pageYOffset - rect.top;
+		Data.mouseX = event.pageX - window.pageXOffset - rect.left
+		Data.mouseY = event.pageY - window.pageYOffset - rect.top
 	}
 
 	static _loadTiles(onInitialized)
 	{
 		Data.tileset = new Tileset("data/assets.png")
-		Data.wallSprites = null;
-		Data.orbSprites = null;
+		Data.wallSprites = null
+		Data.orbSprites = null
 		Data.tileset.tileset.onload
 			= () => {
-			Data.wallSprites = Data.tileset.getTiles(40, 40, 0, 0)
-			Data.orbSprites = Data.tileset.getTiles(25, 25, 200, 0)
+				Data._loadWallTiles(onInitialized)
+				Data._loadOrbTiles(onInitialized)
+			}
+	}
+
+	static _loadWallTiles(onInitialized)
+	{
+		Data.wallSprites = Data.tileset.getTiles(40, 40, 0, 0,
+			() => Data._spritesOnLoad(Data.wallSprites, onInitialized, Data._loadWallTiles)
+		)
+	}
+
+	static _loadOrbTiles(onInitialized)
+	{
+		Data.orbSprites = Data.tileset.getTiles(25, 25, 200, 0,
+			() => Data._spritesOnLoad(Data.orbSprites, onInitialized, Data._loadOrbTiles)
+		)
+	}
+
+	static _spritesOnLoad(sprites, onInitialized, onReset)
+	{
+		if (! sprites)
+			setTimeout(() => onReset(onInitialized), 50)
+		else if (! Data.complete
+			&& Data.orbSprites && Data.orbSprites[0][0] && Data.orbSprites[0][0].width
+			&& Data.wallSprites && Data.wallSprites[0][0] && Data.wallSprites[0][0].width)
+		{
+			Data.complete = true
 			onInitialized(Data)
 		}
 	}
