@@ -1,3 +1,5 @@
+'use strict'
+
 export default class ImageHelper
 {
 	// https://davidwalsh.name/convert-canvas-image

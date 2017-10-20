@@ -1,3 +1,5 @@
+'use strict'
+
 export default class Enum
 {
     constructor(...keys)

@@ -1,3 +1,5 @@
+'use strict'
+
 import MathTools from '../Tools/MathTools'
 import GameObjectBehavior from './GameObjectBehavior'
 

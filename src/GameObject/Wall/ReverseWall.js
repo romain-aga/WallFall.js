@@ -1,3 +1,5 @@
+'use strict'
+
 import BaseWall from './BaseWall'
 
 export default class ReverseWall extends BaseWall

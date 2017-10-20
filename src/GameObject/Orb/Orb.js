@@ -1,4 +1,5 @@
-import MathTools from '../../Tools/MathTools'
+'use strict'
+
 import BaseOrb from './BaseOrb'
 
 export default class Orb extends BaseOrb

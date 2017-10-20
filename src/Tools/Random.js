@@ -1,3 +1,5 @@
+'use strict'
+
 export default class Random
 {
 	static range(min, max)

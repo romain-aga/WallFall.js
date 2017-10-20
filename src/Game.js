@@ -1,3 +1,5 @@
+'use strict'
+
 import Random from './Tools/Random'
 import Pool from './GameObject/Pool'
 import Pools from './GameObject/Pools'

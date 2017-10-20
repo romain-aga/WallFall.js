@@ -1,3 +1,5 @@
+'use strict'
+
 import MathTools from './MathTools'
 
 export default class Collision

@@ -1,3 +1,5 @@
+'use strict'
+
 import MathTools from '../../Tools/MathTools'
 import Pools from '../Pools'
 import BaseWall from './BaseWall'

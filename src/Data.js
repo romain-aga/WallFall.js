@@ -1,3 +1,5 @@
+'use strict'
+
 import Tileset from './Tools/Tileset'
 import Settings from './Tools/Settings'
 

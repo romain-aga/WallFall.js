@@ -1,3 +1,5 @@
+'use strict'
+
 import Random from '../../Tools/Random'
 import Collision from '../../Tools/Collision'
 import MathTools from '../../Tools/MathTools'

@@ -1,4 +1,5 @@
-import Pools from '../Pools'
+'use strict'
+
 import Behaviors from '../Behaviors'
 import BaseWall from './BaseWall'
 

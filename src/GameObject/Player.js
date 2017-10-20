@@ -1,3 +1,5 @@
+'use strict'
+
 import Enum from '../Tools/Enum'
 import MathTools from '../Tools/MathTools'
 import Data from '../Data'
