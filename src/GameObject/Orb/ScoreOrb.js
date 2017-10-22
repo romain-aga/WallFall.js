@@ -1,3 +1,5 @@
+'use strict'
+
 import BaseBonusOrb from './BaseBonusOrb'
 
 export default class ScoreOrb extends BaseBonusOrb

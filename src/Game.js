@@ -1,7 +1,11 @@
+'use strict'
+
 import Random from './Tools/Random'
+import ColorTools from './Tools/ColorTools'
 import Pool from './GameObject/Pool'
 import Pools from './GameObject/Pools'
 import New, { spawnOrder, bonusOrbs } from './GameObject/New'
+import SquareWaters from './GameObject/SquareWaters'
 
 export default class Game
 {
@@ -26,6 +30,7 @@ export default class Game
 		this.levelStepMax = 5
 		this.levelMax = (spawnOrder.length - 1) * this.levelStepMax
 		this.bonusMax = bonusOrbs.length - 1
+		this.levelBonusCount = 0
 		this.levelStep = 0
 		this.data.onWindowResize = (x, y) => this._onWindowResize(x, y)
 		this.context = data.context
@@ -34,7 +39,11 @@ export default class Game
 		this.previousSecond = this.data.now
 		this.i_background = 0
 		this._poolValues = Object.keys(Pool.pools).map(k => Pool.pools[k])
+		this.waters = new SquareWaters(this.data.middle.x, this.data.middle.y, this.data.height / 2 / this.levelStepMax, this.levelStepMax)
+		this.waters.maxSize = 0
+		this.data.waters = this.waters
 		this._initBonusRules()
+		this._initGameInformation()
 		this._drawBackground()
 	}
 
@@ -65,12 +74,13 @@ export default class Game
 	_update()
 	{
 		this.data.now = new Date().getTime()
-		// if (1000 <= this.data.now - this.previousSecond)
-		// 	this._updateBackground()
+		this.waters.update()
 		if (this.data.frameTime === null)
 			this._getFrameTime()
 		this._updateLevel()
-		if (Random.random() < Pools.Wall.length / 10000)
+		if (this.levelBonusCount < this.levelStepMax
+			&& Random.random() < Pools.Wall.length / ((this.data.information.level + 1) * 100)
+		)
 			this._spawnBonus()
 		Object.keys(this.data.game.durations)
 			.forEach(k => (0 < this.data.game.durations[k]) && (this.data.game.durations[k] -= 1))
@@ -94,6 +104,7 @@ export default class Game
 				}
 		}
 		(this.lastBonus = bonus)()
+		this.levelBonusCount++
 	}
 
 	_initBonusRules()
@@ -103,7 +114,7 @@ export default class Game
 			(b, p, wLen) => New.LifeOrb === b && 3 <= p.lives,
 			(b, p, wLen) => New.BerserkOrb === b && wLen <= 5,
 			(b, p, wLen) => New.DestroyerOrb === b && wLen <= 10,
-			(b, p, wLen) => New.TimeOrb === b && 120 <= p.countdown,
+			(b, p, wLen) => New.TimeOrb === b && 5 <= p.countdown,
 			(b, p, wLen) => New.SpeedOrb === b && 30 <= p.maxSpeed,
 			(b, p, wLen) => (New.StopOrb === b || New.SlowdownOrb === b)
 				&& 0 < this.data.game.durations.stopWall + this.data.game.durations.slowWall
@@ -120,10 +131,21 @@ export default class Game
 			let lastWall = this.levelMax <= index
 				? spawnOrder.length - 1
 				: (index / this.levelStepMax)
+			this.waters.maxSize = this.waters.corner * (index % this.levelStepMax)
 			if (index % this.levelStepMax === 0)
 			{
 				index = lastWall
 				this.data.sounds.levelUp.play()
+				const obj = spawnOrder[index | 0]()
+				const color = ColorTools.toRgba(obj.color)
+				color.a = 0.5
+				const color2 = {
+					r: color.r / 2,
+					g: color.g / 2,
+					b: color.b / 2,
+					a: 0.5
+				}
+				this.waters.generateColorsRange(color2, color)
 			}
 			else
 			{
@@ -131,11 +153,13 @@ export default class Game
 				index = 50 < index
 					? lastWall
 					: (index / 50 * lastWall)
+				spawnOrder[index | 0]()
 			}
-			spawnOrder[index | 0]()
 		}
+		this.waters.maxSize += this.waters.corner / this.levelStepMax
 		this.levelStep = (this.levelStep + 1) % this.levelStepMax
 		this.data.game.levelStep--
+		this.levelBonusCount = 0
 	}
 
 	_updateGameInformation()
@@ -170,6 +194,21 @@ export default class Game
 
 	_draw()
 	{
+		if(0 < this.data.game.durations.clearScreen)
+		{
+			this.waters.draw(this.data.context)
+			this.data.context.globalAlpha = 1
+		}
+		else
+		{
+			this.data.background.fillStyle = "black"
+			this.data.background.fillRect(
+				this.data.bounds.x.min, this.data.bounds.y.min,
+				this.data.width, this.data.height
+			)
+			this.waters.draw(this.data.background)
+			this.data.context.drawImage(this.data.backgroundCanvas, 0, 0)
+		}
 		this._poolValues.forEach(p => p.forEach(o => o.draw()))
 		this._updateGameInformation()
 	}
@@ -184,7 +223,8 @@ export default class Game
 			this.data.width, this.data.height
 		)
 		this.data.context.drawImage(this.data.backgroundCanvas, 0, 0)
-		this._gameInformation()
+		//this._initGameInformation()
+		this.textRect.w = this.data.canvas.width - this.textRect.x
 		this._drawGameInformationLabels()
 	}
 
@@ -197,7 +237,7 @@ export default class Game
 		)	
 	}
 
-	_gameInformation()
+	_initGameInformation()
 	{
 		const getValue = v => () => Pool.pools.Player.get(0)[v]
 		this.data.information = {
@@ -241,10 +281,12 @@ export default class Game
 	_onWindowResize(offsetX, offsetY)
 	{
 		this._poolValues
-			.forEach(p => p.forEach(o => {
-				o.x += offsetX
-				o.y += offsetY
-			}))
+			.forEach(p => p
+				.forEach(o => o
+					.onWindowResize(offsetX, offsetY)
+				)
+			)
+		this.waters.setCoords(this.waters.x + offsetX, this.waters.y + offsetY)
 		this._drawBackground()
 	}
 

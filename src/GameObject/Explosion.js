@@ -1,5 +1,7 @@
+'use strict'
+
 import MathTools from '../Tools/MathTools'
-import Color from '../Tools/Color'
+import ColorTools from '../Tools/ColorTools'
 import Random from '../Tools/Random'
 import GameObjectBehavior from './GameObjectBehavior'
 import New from './New'
@@ -18,7 +20,8 @@ export default class Explosion extends GameObjectBehavior
         self.color = color
         self.isSquare = isSquare
         self.colorGap = colorGap
-        self.rgb = Color.hexToRgb(color)
+        self.isAffectedByStopWall = self.data.game.durations.stopWall === 0
+        self.rgb = ColorTools.hexToRgba(color)
         for (let i = 0; i < 3; ++i)
             if (self.rgb[i] + self.colorGap > 255)
                 self.rgb[i] = 255 - self.colorGap
@@ -28,6 +31,8 @@ export default class Explosion extends GameObjectBehavior
 	
 	update(self)
 	{
+        if (self.isAffectedByStopWall && self.data.game.durations.stopWall)
+            return
         self.x += self.decreasingSpeed
         self.y += self.decreasingSpeed
         self.radius -= self.decreasingSpeed
@@ -41,7 +46,7 @@ export default class Explosion extends GameObjectBehavior
             let direction = MathTools.direction(self.x, self.y, x, y)
             let speed = self.particleSpeed
                 * MathTools.squareDistance(self.x, self.y, x, y) / (self.radius * self.radius) 
-            let color = Color.rgbToHex(
+            let color = ColorTools.rgbaToHex(
                 self.rgb[0] + Random.range(0, self.colorGap),
                 self.rgb[1] + Random.range(0, self.colorGap),
                 self.rgb[2] + Random.range(0, self.colorGap)

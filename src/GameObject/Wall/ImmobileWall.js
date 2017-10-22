@@ -1,3 +1,5 @@
+'use strict'
+
 import BaseWall from './BaseWall'
 import Collision from '../../Tools/Collision'
 import MathTools from '../../Tools/MathTools'

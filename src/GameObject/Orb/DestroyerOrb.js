@@ -1,3 +1,5 @@
+'use strict'
+
 import BaseBonusOrb from './BaseBonusOrb'
 import Pools from '../Pools'
 

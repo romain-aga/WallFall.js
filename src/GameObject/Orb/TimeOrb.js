@@ -1,3 +1,5 @@
+'use strict'
+
 import BaseBonusOrb from './BaseBonusOrb'
 
 export default class TimeOrb extends BaseBonusOrb
@@ -9,6 +11,6 @@ export default class TimeOrb extends BaseBonusOrb
 
     bonus(self, player)
     {
-        player.time += 30000
+        player.time += 10000
     }
 }

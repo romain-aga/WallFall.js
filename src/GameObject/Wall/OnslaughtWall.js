@@ -1,3 +1,5 @@
+'use strict'
+
 import Pools from '../Pools'
 import Collision from '../../Tools/Collision'
 import BaseWall from './BaseWall'
@@ -10,8 +12,6 @@ export default class OnslaughtWall extends BaseWall
         super.init(self, self.data.wallSprites[1][2], "#2903fe")
         self.maxSpeed = self.speed * 2
         self.minSpeed = self.speed / 2
-        if (self.speed !== 2.82)
-            console.log(self.previousBehaviorName, self.speed)
         self.speed = self.minSpeed
     }
 

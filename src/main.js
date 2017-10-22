@@ -1,3 +1,5 @@
+'use strict'
+
 import WallFall from './WallFall'
 import Data from './Data'
 

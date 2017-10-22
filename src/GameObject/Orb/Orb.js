@@ -1,4 +1,5 @@
-import MathTools from '../../Tools/MathTools'
+'use strict'
+
 import BaseOrb from './BaseOrb'
 
 export default class Orb extends BaseOrb
@@ -7,7 +8,7 @@ export default class Orb extends BaseOrb
     {
         super()
         this.score = 10
-        this.time = 2500
+        this.time = 1000
         this.secondsForBonus = 5
         this.timeSeconds = this.time / 1000
     }
@@ -31,7 +32,7 @@ export default class Orb extends BaseOrb
             {
                 let ratio = diff / this.secondsForBonus
                 player.score += ratio * this.score
-                player.time += ratio * this.time
+                player.time += ratio * this.time / 2
                 self.previousAdditionnalSeconds = (this.time + ratio * this.time) / 1000
             }
         }

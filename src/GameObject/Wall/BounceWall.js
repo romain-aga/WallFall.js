@@ -1,3 +1,5 @@
+'use strict'
+
 import Collision from '../../Tools/Collision'
 import Pools from '../Pools'
 import BaseWall from './BaseWall'

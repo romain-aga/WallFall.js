@@ -1,3 +1,5 @@
+'use strict'
+
 export default class GameObject
 {
 	constructor(pool, data)
@@ -73,6 +75,11 @@ export default class GameObject
 				this._rectToClean.x, this._rectToClean.y,
 				this._rectToClean.w, this._rectToClean.h
 			)
+	}
+
+	onWindowResize(offsetX, offsetY)
+	{
+		this.behavior.onWindowResize(this, offsetX, offsetY)
 	}
 
 	destroy()
