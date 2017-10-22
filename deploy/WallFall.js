@@ -191,6 +191,7 @@ var Data = function () {
 		key: 'init',
 		value: function init(onInitialized) {
 			window.onresize = Data._onWindowResize;
+			Data.complete = false;
 			Data._initGameInformation();
 			Data._loadTiles(onInitialized);
 			Data._loadSettings();
@@ -319,10 +320,33 @@ var Data = function () {
 			Data.wallSprites = null;
 			Data.orbSprites = null;
 			Data.tileset.tileset.onload = function () {
-				Data.wallSprites = Data.tileset.getTiles(40, 40, 0, 0);
-				Data.orbSprites = Data.tileset.getTiles(25, 25, 200, 0);
-				onInitialized(Data);
+				Data._loadWallTiles(onInitialized);
+				Data._loadOrbTiles(onInitialized);
 			};
+		}
+	}, {
+		key: '_loadWallTiles',
+		value: function _loadWallTiles(onInitialized) {
+			Data.wallSprites = Data.tileset.getTiles(40, 40, 0, 0, function () {
+				return Data._spritesOnLoad(Data.wallSprites, onInitialized, Data._loadWallTiles);
+			});
+		}
+	}, {
+		key: '_loadOrbTiles',
+		value: function _loadOrbTiles(onInitialized) {
+			Data.orbSprites = Data.tileset.getTiles(25, 25, 200, 0, function () {
+				return Data._spritesOnLoad(Data.orbSprites, onInitialized, Data._loadOrbTiles);
+			});
+		}
+	}, {
+		key: '_spritesOnLoad',
+		value: function _spritesOnLoad(sprites, onInitialized, onReset) {
+			if (!sprites) setTimeout(function () {
+				return onReset(onInitialized);
+			}, 50);else if (!Data.complete && Data.orbSprites && Data.orbSprites[0][0] && Data.orbSprites[0][0].width && Data.wallSprites && Data.wallSprites[0][0] && Data.wallSprites[0][0].width) {
+				Data.complete = true;
+				onInitialized(Data);
+			}
 		}
 	}]);
 
@@ -361,6 +385,10 @@ var _Random = require('./Tools/Random');
 
 var _Random2 = _interopRequireDefault(_Random);
 
+var _ColorTools = require('./Tools/ColorTools');
+
+var _ColorTools2 = _interopRequireDefault(_ColorTools);
+
 var _Pool = require('./GameObject/Pool');
 
 var _Pool2 = _interopRequireDefault(_Pool);
@@ -372,6 +400,10 @@ var _Pools2 = _interopRequireDefault(_Pools);
 var _New = require('./GameObject/New');
 
 var _New2 = _interopRequireDefault(_New);
+
+var _SquareWaters = require('./GameObject/SquareWaters');
+
+var _SquareWaters2 = _interopRequireDefault(_SquareWaters);
 
 function _interopRequireDefault(obj) {
 	return obj && obj.__esModule ? obj : { default: obj };
@@ -408,6 +440,7 @@ var Game = function () {
 		this.levelStepMax = 5;
 		this.levelMax = (_New.spawnOrder.length - 1) * this.levelStepMax;
 		this.bonusMax = _New.bonusOrbs.length - 1;
+		this.levelBonusCount = 0;
 		this.levelStep = 0;
 		this.data.onWindowResize = function (x, y) {
 			return _this._onWindowResize(x, y);
@@ -420,7 +453,11 @@ var Game = function () {
 		this._poolValues = Object.keys(_Pool2.default.pools).map(function (k) {
 			return _Pool2.default.pools[k];
 		});
+		this.waters = new _SquareWaters2.default(this.data.middle.x, this.data.middle.y, this.data.height / 2 / this.levelStepMax, this.levelStepMax);
+		this.waters.maxSize = 0;
+		this.data.waters = this.waters;
 		this._initBonusRules();
+		this._initGameInformation();
 		this._drawBackground();
 	}
 
@@ -456,11 +493,10 @@ var Game = function () {
 			var _this3 = this;
 
 			this.data.now = new Date().getTime();
-			// if (1000 <= this.data.now - this.previousSecond)
-			// 	this._updateBackground()
+			this.waters.update();
 			if (this.data.frameTime === null) this._getFrameTime();
 			this._updateLevel();
-			if (_Random2.default.random() < _Pools2.default.Wall.length / 10000) this._spawnBonus();
+			if (this.levelBonusCount < this.levelStepMax && _Random2.default.random() < _Pools2.default.Wall.length / ((this.data.information.level + 1) * 100)) this._spawnBonus();
 			Object.keys(this.data.game.durations).forEach(function (k) {
 				return 0 < _this3.data.game.durations[k] && (_this3.data.game.durations[k] -= 1);
 			});
@@ -487,6 +523,7 @@ var Game = function () {
 				}
 			}
 			(this.lastBonus = bonus)();
+			this.levelBonusCount++;
 		}
 	}, {
 		key: '_initBonusRules',
@@ -502,7 +539,7 @@ var Game = function () {
 			}, function (b, p, wLen) {
 				return _New2.default.DestroyerOrb === b && wLen <= 10;
 			}, function (b, p, wLen) {
-				return _New2.default.TimeOrb === b && 120 <= p.countdown;
+				return _New2.default.TimeOrb === b && 5 <= p.countdown;
 			}, function (b, p, wLen) {
 				return _New2.default.SpeedOrb === b && 30 <= p.maxSpeed;
 			}, function (b, p, wLen) {
@@ -516,17 +553,30 @@ var Game = function () {
 			if (this.levelStep === 0) {
 				var index = this.data.information.level++;
 				var lastWall = this.levelMax <= index ? _New.spawnOrder.length - 1 : index / this.levelStepMax;
+				this.waters.maxSize = this.waters.corner * (index % this.levelStepMax);
 				if (index % this.levelStepMax === 0) {
 					index = lastWall;
 					this.data.sounds.levelUp.play();
+					var obj = _New.spawnOrder[index | 0]();
+					var color = _ColorTools2.default.toRgba(obj.color);
+					color.a = 0.5;
+					var color2 = {
+						r: color.r / 2,
+						g: color.g / 2,
+						b: color.b / 2,
+						a: 0.5
+					};
+					this.waters.generateColorsRange(color2, color);
 				} else {
 					index = _Random2.default.random() * 100;
 					index = 50 < index ? lastWall : index / 50 * lastWall;
+					_New.spawnOrder[index | 0]();
 				}
-				_New.spawnOrder[index | 0]();
 			}
+			this.waters.maxSize += this.waters.corner / this.levelStepMax;
 			this.levelStep = (this.levelStep + 1) % this.levelStepMax;
 			this.data.game.levelStep--;
+			this.levelBonusCount = 0;
 		}
 	}, {
 		key: '_updateGameInformation',
@@ -549,6 +599,15 @@ var Game = function () {
 	}, {
 		key: '_draw',
 		value: function _draw() {
+			if (0 < this.data.game.durations.clearScreen) {
+				this.waters.draw(this.data.context);
+				this.data.context.globalAlpha = 1;
+			} else {
+				this.data.background.fillStyle = "black";
+				this.data.background.fillRect(this.data.bounds.x.min, this.data.bounds.y.min, this.data.width, this.data.height);
+				this.waters.draw(this.data.background);
+				this.data.context.drawImage(this.data.backgroundCanvas, 0, 0);
+			}
 			this._poolValues.forEach(function (p) {
 				return p.forEach(function (o) {
 					return o.draw();
@@ -564,7 +623,8 @@ var Game = function () {
 			this.data.background.fillStyle = "black";
 			this.data.background.fillRect(this.data.bounds.x.min, this.data.bounds.y.min, this.data.width, this.data.height);
 			this.data.context.drawImage(this.data.backgroundCanvas, 0, 0);
-			this._gameInformation();
+			//this._initGameInformation()
+			this.textRect.w = this.data.canvas.width - this.textRect.x;
 			this._drawGameInformationLabels();
 		}
 	}, {
@@ -574,8 +634,8 @@ var Game = function () {
 			this.data.background.fillRect(this.data.bounds.x.min, this.data.bounds.y.min, this.data.width, this.data.height);
 		}
 	}, {
-		key: '_gameInformation',
-		value: function _gameInformation() {
+		key: '_initGameInformation',
+		value: function _initGameInformation() {
 			var getValue = function getValue(v) {
 				return function () {
 					return _Pool2.default.pools.Player.get(0)[v];
@@ -619,10 +679,10 @@ var Game = function () {
 		value: function _onWindowResize(offsetX, offsetY) {
 			this._poolValues.forEach(function (p) {
 				return p.forEach(function (o) {
-					o.x += offsetX;
-					o.y += offsetY;
+					return o.onWindowResize(offsetX, offsetY);
 				});
 			});
+			this.waters.setCoords(this.waters.x + offsetX, this.waters.y + offsetY);
 			this._drawBackground();
 		}
 	}, {
@@ -642,7 +702,7 @@ exports.default = Game;
 });
 
 require.register("src/GameObject/Behaviors.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -674,9 +734,9 @@ var _MathTools = require('../Tools/MathTools');
 
 var _MathTools2 = _interopRequireDefault(_MathTools);
 
-var _Color = require('../Tools/Color');
+var _ColorTools = require('../Tools/ColorTools');
 
-var _Color2 = _interopRequireDefault(_Color);
+var _ColorTools2 = _interopRequireDefault(_ColorTools);
 
 var _Random = require('../Tools/Random');
 
@@ -741,7 +801,8 @@ var Explosion = function (_GameObjectBehavior) {
             self.color = color;
             self.isSquare = isSquare;
             self.colorGap = colorGap;
-            self.rgb = _Color2.default.hexToRgb(color);
+            self.isAffectedByStopWall = self.data.game.durations.stopWall === 0;
+            self.rgb = _ColorTools2.default.hexToRgba(color);
             for (var i = 0; i < 3; ++i) {
                 if (self.rgb[i] + self.colorGap > 255) self.rgb[i] = 255 - self.colorGap;else if (self.rgb[i] - self.colorGap < 0) self.rgb[i] = self.colorGap;
             }
@@ -749,6 +810,7 @@ var Explosion = function (_GameObjectBehavior) {
     }, {
         key: 'update',
         value: function update(self) {
+            if (self.isAffectedByStopWall && self.data.game.durations.stopWall) return;
             self.x += self.decreasingSpeed;
             self.y += self.decreasingSpeed;
             self.radius -= self.decreasingSpeed;
@@ -758,7 +820,7 @@ var Explosion = function (_GameObjectBehavior) {
                 var y = self.y + _Random2.default.range(-self.radius, self.radius);
                 var direction = _MathTools2.default.direction(self.x, self.y, x, y);
                 var speed = self.particleSpeed * _MathTools2.default.squareDistance(self.x, self.y, x, y) / (self.radius * self.radius);
-                var color = _Color2.default.rgbToHex(self.rgb[0] + _Random2.default.range(0, self.colorGap), self.rgb[1] + _Random2.default.range(0, self.colorGap), self.rgb[2] + _Random2.default.range(0, self.colorGap));
+                var color = _ColorTools2.default.rgbaToHex(self.rgb[0] + _Random2.default.range(0, self.colorGap), self.rgb[1] + _Random2.default.range(0, self.colorGap), self.rgb[2] + _Random2.default.range(0, self.colorGap));
                 _New2.default.Particle(x, y, direction, speed, self.width, self.color, self.isSquare, self.decreasingSpeed);
             }
         }
@@ -874,6 +936,11 @@ var GameObject = function () {
 			if (this._clearScreen) this.data.context.drawImage(this.data.backgroundCanvas, this._rectToClean.x, this._rectToClean.y, this._rectToClean.w, this._rectToClean.h, this._rectToClean.x, this._rectToClean.y, this._rectToClean.w, this._rectToClean.h);
 		}
 	}, {
+		key: 'onWindowResize',
+		value: function onWindowResize(offsetX, offsetY) {
+			this.behavior.onWindowResize(this, offsetX, offsetY);
+		}
+	}, {
 		key: 'destroy',
 		value: function destroy() {
 			this.behavior.destroy(this);
@@ -946,9 +1013,9 @@ var _MathTools = require('../Tools/MathTools');
 
 var _MathTools2 = _interopRequireDefault(_MathTools);
 
-var _Pool = require('./Pool');
+var _Collision = require('../Tools/Collision');
 
-var _Pool2 = _interopRequireDefault(_Pool);
+var _Collision2 = _interopRequireDefault(_Collision);
 
 function _interopRequireDefault(obj) {
 	return obj && obj.__esModule ? obj : { default: obj };
@@ -971,13 +1038,34 @@ var GameObjectBehavior = function () {
 		key: 'init',
 		value: function init(self) {}
 	}, {
+		key: 'updateWater',
+		value: function updateWater(self, direction, speed) {
+			var collisionMethod = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : _Collision2.default.dotCircle;
+
+			if (!speed) return;
+			self.data.waters.waters.filter(function (w) {
+				return w.alpha;
+			}).forEach(function (w) {
+				return w.springs.forEach(function (s) {
+					if (collisionMethod(s, self)) s.speed += _MathTools2.default.angleFactor(s.direction, direction) * speed;
+				});
+			});
+		}
+	}, {
 		key: 'update',
 		value: function update(self) {
 			if (self.speed) {
+				this.updateWater(self);
 				var rad = _MathTools2.default.rads(self.direction);
 				self.x += Math.cos(rad) * self.speed;
 				self.y -= Math.sin(rad) * self.speed;
 			}
+		}
+	}, {
+		key: 'onWindowResize',
+		value: function onWindowResize(self, offsetX, offsetY) {
+			self.x += offsetX;
+			self.y += offsetY;
 		}
 	}, {
 		key: 'draw',
@@ -1318,10 +1406,6 @@ var _Random = require('../../Tools/Random');
 
 var _Random2 = _interopRequireDefault(_Random);
 
-var _MathTools = require('../../Tools/MathTools');
-
-var _MathTools2 = _interopRequireDefault(_MathTools);
-
 var _Collision = require('../../Tools/Collision');
 
 var _Collision2 = _interopRequireDefault(_Collision);
@@ -1436,7 +1520,7 @@ exports.default = BaseOrb;
 });
 
 require.register("src/GameObject/Orb/BerserkOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -1470,7 +1554,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -1506,16 +1590,16 @@ var BerserkOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(BerserkOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(BerserkOrb.prototype.__proto__ || Object.getPrototypeOf(BerserkOrb.prototype), "init", this).call(this, self, 1, 7, "#6b0e04");
+            _get(BerserkOrb.prototype.__proto__ || Object.getPrototypeOf(BerserkOrb.prototype), 'init', this).call(this, self, 1, 7, "#6b0e04");
             self.lifetime /= 2;
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             player.stateValues.berserk += player.stateDuration;
-            _get(BerserkOrb.prototype.__proto__ || Object.getPrototypeOf(BerserkOrb.prototype), "bonus", this).call(this, self, player);
+            _get(BerserkOrb.prototype.__proto__ || Object.getPrototypeOf(BerserkOrb.prototype), 'bonus', this).call(this, self, player);
         }
     }]);
 
@@ -1623,7 +1707,7 @@ exports.default = DestroyerOrb;
 });
 
 require.register("src/GameObject/Orb/GodOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -1657,7 +1741,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -1693,12 +1777,12 @@ var GodOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(GodOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(GodOrb.prototype.__proto__ || Object.getPrototypeOf(GodOrb.prototype), "init", this).call(this, self, 1, 5, "#fe6c00");
+            _get(GodOrb.prototype.__proto__ || Object.getPrototypeOf(GodOrb.prototype), 'init', this).call(this, self, 1, 5, "#fe6c00");
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             player.stateValues.god += player.stateDuration;
         }
@@ -1712,7 +1796,7 @@ exports.default = GodOrb;
 });
 
 require.register("src/GameObject/Orb/LifeOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -1746,7 +1830,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -1782,13 +1866,13 @@ var LifeOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(LifeOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(LifeOrb.prototype.__proto__ || Object.getPrototypeOf(LifeOrb.prototype), "init", this).call(this, self, 1, 2, "#c00004");
+            _get(LifeOrb.prototype.__proto__ || Object.getPrototypeOf(LifeOrb.prototype), 'init', this).call(this, self, 1, 2, "#c00004");
             self.lifetime /= 2;
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             player.lives++;
         }
@@ -1836,10 +1920,6 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _MathTools = require('../../Tools/MathTools');
-
-var _MathTools2 = _interopRequireDefault(_MathTools);
-
 var _BaseOrb2 = require('./BaseOrb');
 
 var _BaseOrb3 = _interopRequireDefault(_BaseOrb2);
@@ -1875,7 +1955,7 @@ var Orb = function (_BaseOrb) {
         var _this = _possibleConstructorReturn(this, (Orb.__proto__ || Object.getPrototypeOf(Orb)).call(this));
 
         _this.score = 10;
-        _this.time = 2500;
+        _this.time = 1000;
         _this.secondsForBonus = 5;
         _this.timeSeconds = _this.time / 1000;
         return _this;
@@ -1899,7 +1979,7 @@ var Orb = function (_BaseOrb) {
                 if (0 < diff) {
                     var ratio = diff / this.secondsForBonus;
                     player.score += ratio * this.score;
-                    player.time += ratio * this.time;
+                    player.time += ratio * this.time / 2;
                     self.previousAdditionnalSeconds = (this.time + ratio * this.time) / 1000;
                 }
             }
@@ -1915,7 +1995,7 @@ exports.default = Orb;
 });
 
 require.register("src/GameObject/Orb/ScoreOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -1949,7 +2029,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -1985,12 +2065,12 @@ var ScoreOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(ScoreOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(ScoreOrb.prototype.__proto__ || Object.getPrototypeOf(ScoreOrb.prototype), "init", this).call(this, self, 1, 1, "#09b900");
+            _get(ScoreOrb.prototype.__proto__ || Object.getPrototypeOf(ScoreOrb.prototype), 'init', this).call(this, self, 1, 1, "#09b900");
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             player.score += 100;
         }
@@ -2004,7 +2084,7 @@ exports.default = ScoreOrb;
 });
 
 require.register("src/GameObject/Orb/SlowdownOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -2038,7 +2118,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -2074,13 +2154,13 @@ var SlowdownOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(SlowdownOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(SlowdownOrb.prototype.__proto__ || Object.getPrototypeOf(SlowdownOrb.prototype), "init", this).call(this, self, 2, 1, "#17cc71");
+            _get(SlowdownOrb.prototype.__proto__ || Object.getPrototypeOf(SlowdownOrb.prototype), 'init', this).call(this, self, 2, 1, "#17cc71");
             self.lifetime /= 2;
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             self.data.game.durations.slowWall += player.stateDuration;
         }
@@ -2094,7 +2174,7 @@ exports.default = SlowdownOrb;
 });
 
 require.register("src/GameObject/Orb/SpeedOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -2128,7 +2208,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -2164,12 +2244,12 @@ var SpeedOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(SpeedOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(SpeedOrb.prototype.__proto__ || Object.getPrototypeOf(SpeedOrb.prototype), "init", this).call(this, self, 1, 3, "#006aff");
+            _get(SpeedOrb.prototype.__proto__ || Object.getPrototypeOf(SpeedOrb.prototype), 'init', this).call(this, self, 1, 3, "#006aff");
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             player.maxSpeed += 5;
         }
@@ -2183,7 +2263,7 @@ exports.default = SpeedOrb;
 });
 
 require.register("src/GameObject/Orb/StopOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -2217,7 +2297,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -2253,17 +2333,17 @@ var StopOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(StopOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(StopOrb.prototype.__proto__ || Object.getPrototypeOf(StopOrb.prototype), "init", this).call(this, self, 1, 6, "#6c6c6c");
+            _get(StopOrb.prototype.__proto__ || Object.getPrototypeOf(StopOrb.prototype), 'init', this).call(this, self, 1, 6, "#6c6c6c");
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
             self.data.game.durations.stopWall += player.stateDuration;
         }
     }, {
-        key: "destroy",
+        key: 'destroy',
         value: function destroy(self) {
             if (self.taken) self.data.sounds.orbStop.play();
         }
@@ -2277,7 +2357,7 @@ exports.default = StopOrb;
 });
 
 require.register("src/GameObject/Orb/TimeOrb.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -2311,7 +2391,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseBonusOrb2 = require("./BaseBonusOrb");
+var _BaseBonusOrb2 = require('./BaseBonusOrb');
 
 var _BaseBonusOrb3 = _interopRequireDefault(_BaseBonusOrb2);
 
@@ -2347,14 +2427,14 @@ var TimeOrb = function (_BaseBonusOrb) {
     }
 
     _createClass(TimeOrb, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(TimeOrb.prototype.__proto__ || Object.getPrototypeOf(TimeOrb.prototype), "init", this).call(this, self, 1, 4, "#c400c9");
+            _get(TimeOrb.prototype.__proto__ || Object.getPrototypeOf(TimeOrb.prototype), 'init', this).call(this, self, 1, 4, "#c400c9");
         }
     }, {
-        key: "bonus",
+        key: 'bonus',
         value: function bonus(self, player) {
-            player.time += 30000;
+            player.time += 10000;
         }
     }]);
 
@@ -2444,6 +2524,7 @@ var Particle = function (_GameObjectBehavior) {
             self.radius = width / 2;
             self.color = color;
             self.isSquare = isSquare;
+            self.isAffectedByStopWall = self.data.game.durations.stopWall === 0;
             var rads = _MathTools2.default.rads(direction);
             self.dx = Math.cos(rads) * self.speed + self.decreasingSpeed;
             self.dy = -Math.sin(rads) * self.speed + self.decreasingSpeed;
@@ -2451,6 +2532,7 @@ var Particle = function (_GameObjectBehavior) {
     }, {
         key: 'update',
         value: function update(self) {
+            if (self.isAffectedByStopWall && self.data.game.durations.stopWall) return;
             self.radius -= self.decreasingSpeed;
             self.height = self.width = self.radius * 2;
             if (self.radius <= 0) self.destroy();else {
@@ -2614,6 +2696,7 @@ var Player = function (_GameObjectBehavior) {
             self.score = 0;
             self.lastLifeWarned = false;
             self.time = this.startTime;
+            self.explosion = null;
             self.startedAt = self.data.now;
             self.countdown = self.time / 1000;
             self.i_particle = 0;
@@ -2627,15 +2710,26 @@ var Player = function (_GameObjectBehavior) {
             if (self.countdown < 0) self.countdown = 0;
         }
     }, {
+        key: '_updateExplosion',
+        value: function _updateExplosion(self) {
+            if (!self.explosion.radius) self.explosion = null;else {
+                self.explosion.x = self.x;
+                self.explosion.y = self.y;
+            }
+        }
+    }, {
         key: 'update',
         value: function update(self) {
             this._updateCoord(self);
+            this.updateWater(self, self.direction, self.speed);
             this._updateState(self);
             this._drawQueue(self);
             this._updateCountdown(self);
+            if (self.explosion) this._updateExplosion(self);
             if (self.countdown <= 0) {
                 self.lives--;
                 self.time += this.startTime;
+                self.explosion = _New2.default.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width * 1.5, self.color, false, 5);
             }
             if (self.lives <= 0) self.destroy();
         }
@@ -2671,7 +2765,7 @@ var Player = function (_GameObjectBehavior) {
                     self.state = state;
                 }
             }
-            if (self.state !== normalState && self.stateValues[self.state] <= ++self.i_stateExplosion) {
+            if (self.state !== normalState && self.stateValues[self.state] <= ++self.i_stateExplosion || self.countdown <= 12 && self.countdown * 10 <= ++self.i_stateExplosion) {
                 _New2.default.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width, self.color, false, 2.5);
                 self.i_stateExplosion = 0;
             }
@@ -2705,7 +2799,7 @@ var Player = function (_GameObjectBehavior) {
     }, {
         key: '_drawQueue',
         value: function _drawQueue(self) {
-            if (self.i_particle++ % 2 === 0 && self.speed) _New2.default.Particle(self.x, self.y, 0, 0, self.width, self.color);
+            if (self.i_particle++ % 2 === 0 && self.speed) _New2.default.Particle(self.x, self.y, 0, 0, self.width, self.color, false, 1.0 / (self.countdown / 30));
         }
     }]);
 
@@ -2818,12 +2912,348 @@ exports.default = Pool;
 });
 
 require.register("src/GameObject/Pools.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = {};
+
+});
+
+require.register("src/GameObject/SquareWater.js", function(exports, require, module) {
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _MathTools = require('../Tools/MathTools');
+
+var _MathTools2 = _interopRequireDefault(_MathTools);
+
+var _WaterSpring = require('./WaterSpring');
+
+var _WaterSpring2 = _interopRequireDefault(_WaterSpring);
+
+var _Water2 = require('./Water');
+
+var _Water3 = _interopRequireDefault(_Water2);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
+
+function _possibleConstructorReturn(self, call) {
+    if (!self) {
+        throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }return call && ((typeof call === "undefined" ? "undefined" : _typeof(call)) === "object" || typeof call === "function") ? call : self;
+}
+
+function _inherits(subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+        throw new TypeError("Super expression must either be null or a function, not " + (typeof superClass === "undefined" ? "undefined" : _typeof(superClass)));
+    }subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var SquareWater = function (_Water) {
+    _inherits(SquareWater, _Water);
+
+    function SquareWater(x, y) {
+        var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+        _classCallCheck(this, SquareWater);
+
+        return _possibleConstructorReturn(this, (SquareWater.__proto__ || Object.getPrototypeOf(SquareWater)).call(this, x, y, options));
+    }
+
+    _createClass(SquareWater, [{
+        key: '_init',
+        value: function _init(x, y, _ref) {
+            var _ref$side = _ref.side,
+                side = _ref$side === undefined ? 300 : _ref$side,
+                _ref$step = _ref.step,
+                step = _ref$step === undefined ? 5 : _ref$step,
+                _ref$colors = _ref.colors,
+                colors = _ref$colors === undefined ? ['cyan', 'blue'] : _ref$colors,
+                _ref$alpha = _ref.alpha,
+                alpha = _ref$alpha === undefined ? 1 : _ref$alpha,
+                _ref$corner = _ref.corner,
+                corner = _ref$corner === undefined ? 30 : _ref$corner,
+                _ref$angle = _ref.angle,
+                angle = _ref$angle === undefined ? 0 : _ref$angle,
+                _ref$springConstants = _ref.springConstants,
+                springConstants = _ref$springConstants === undefined ? _WaterSpring2.default.constants : _ref$springConstants;
+
+            this.aboveWater = null;
+            this.alpha = alpha;
+            this.colors = colors;
+            this.colorAngle = 0;
+            this.colorPhase = 0;
+            this.constants = Object.assign(_WaterSpring2.default.constants, springConstants);
+            this.side = side;
+            this.corner = corner;
+            this.x = x;
+            this.y = y;
+            this.springs = [];
+            this.gradientPhases = [this.gradientPhase1, this.gradientPhase2];
+            var halfSide = (side - corner * 2) / 2;
+            for (var iSide = 0; iSide < 4; ++iSide) {
+                var stepCos = Math.cos(_MathTools2.default.rads(angle - iSide * 90));
+                var stepSin = Math.sin(_MathTools2.default.rads(angle - iSide * 90));
+                var sideCos = Math.cos(_MathTools2.default.rads(angle + (1 - iSide) * 90));
+                var sideSin = Math.sin(_MathTools2.default.rads(angle + (1 - iSide) * 90));
+                for (var iStep = 0; iStep * step < halfSide * 2; ++iStep) {
+                    this.springs.push(new _WaterSpring2.default(this, x + stepCos * (iStep * step - halfSide) + sideCos * side / 2, y - stepSin * (iStep * step - halfSide) - sideSin * side / 2, angle + (1 - iSide) * 90));
+                }var xCenter = x + (stepCos + sideCos) * (side / 2 - corner);
+                var yCenter = y - (stepSin + sideSin) * (side / 2 - corner);
+                for (var _iStep = 0; _iStep * step < 90; ++_iStep) {
+                    var springAngle = angle + (1 - iSide) * 90 - _iStep * step;
+                    this.springs.push(new _WaterSpring2.default(this, xCenter + Math.cos(_MathTools2.default.rads(springAngle)) * corner, yCenter - Math.sin(_MathTools2.default.rads(springAngle)) * corner, springAngle));
+                }
+            }
+        }
+    }, {
+        key: 'draw',
+        value: function draw(context) {
+            if (this.alpha) {
+                var colorAngle = _MathTools2.default.rads(this.colorAngle);
+                var colorCos = Math.cos(colorAngle);
+                var colorSin = Math.sin(colorAngle);
+
+                context.globalAlpha = this.alpha;
+                var side = this.side + this.offset;
+                var gradient = context.createLinearGradient(this.x - colorCos * side, this.y + colorSin * side, this.x + colorCos * side, this.y - colorSin * side);
+
+                context.fillStyle = gradient;
+                context.beginPath();
+                this.springs.forEach(function (s) {
+                    return context.lineTo(s.x, s.y);
+                });
+                context.closePath();
+                context.fill();
+
+                context.globalAlpha = this.alpha / 2.0;
+                gradient = context.createRadialGradient(this.x, this.y, 0, this.x, this.y, side);
+                this.gradientColors(gradient, this.colors[0], this.colors[1]);
+                context.fillStyle = gradient;
+                context.fill();
+            }
+            this.colorAngle = (this.colorAngle + 5) % 360;
+            if (this.colorAngle === 0) this.colorPhase = ++this.colorPhase % this.gradientPhases.length;
+        }
+    }, {
+        key: 'gradientColors',
+        value: function gradientColors(gradient, color1, color2) {
+            this.gradientPhases[this.colorPhase].call(this, gradient, color1, color2, this.colorAngle / 360.0);
+        }
+    }, {
+        key: 'gradientPhase1',
+        value: function gradientPhase1(gradient, color1, color2, value) {
+            gradient.addColorStop(0, color2);
+            gradient.addColorStop(value, color1);
+            gradient.addColorStop(1, color2);
+        }
+    }, {
+        key: 'gradientPhase2',
+        value: function gradientPhase2(gradient, color1, color2, value) {
+            gradient.addColorStop(0, color1);
+            gradient.addColorStop(value, color2);
+            gradient.addColorStop(1, color1);
+        }
+    }]);
+
+    return SquareWater;
+}(_Water3.default);
+
+exports.default = SquareWater;
+
+});
+
+require.register("src/GameObject/SquareWaters.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _ColorTools = require('../Tools/ColorTools');
+
+var _ColorTools2 = _interopRequireDefault(_ColorTools);
+
+var _WaterSpring = require('./WaterSpring');
+
+var _WaterSpring2 = _interopRequireDefault(_WaterSpring);
+
+var _SquareWater = require('./SquareWater');
+
+var _SquareWater2 = _interopRequireDefault(_SquareWater);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
+
+var SquareWaters = function () {
+    function SquareWaters(x, y, corner, length) {
+        var _this = this;
+
+        var _ref = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {},
+            _ref$color = _ref.color1,
+            color1 = _ref$color === undefined ? '#0000FFFF' : _ref$color,
+            _ref$color2 = _ref.color2,
+            color2 = _ref$color2 === undefined ? '#00FFFFFF' : _ref$color2,
+            _ref$step = _ref.step,
+            step = _ref$step === undefined ? 10 : _ref$step,
+            _ref$alpha = _ref.alpha,
+            alpha = _ref$alpha === undefined ? 1 : _ref$alpha,
+            _ref$growValue = _ref.growValue,
+            growValue = _ref$growValue === undefined ? 1 : _ref$growValue,
+            _ref$shrinkValue = _ref.shrinkValue,
+            shrinkValue = _ref$shrinkValue === undefined ? -5 : _ref$shrinkValue,
+            _ref$springConstants = _ref.springConstants,
+            springConstants = _ref$springConstants === undefined ? _WaterSpring2.default.constants : _ref$springConstants;
+
+        _classCallCheck(this, SquareWaters);
+
+        this.x = x;
+        this.y = y;
+        this.alpha = alpha;
+        this.maxSize = corner * length;
+        this.size = 0;
+        this.corner = corner;
+        this.growValue = growValue;
+        this.shrinkValue = shrinkValue;
+        this.growth = this.growValue;
+        this._length = length;
+        this.waters = [];
+        for (var i = 0; i < length; ++i) {
+            this.waters.push(new _SquareWater2.default(x, y, {
+                side: corner * 2 * (1 + i),
+                corner: corner,
+                colors: color1,
+                alpha: alpha,
+                step: step,
+                springConstants: springConstants
+            }));
+        }this.generateColorsRange(color1, color2);
+        //this.waters.forEach(w => w.tilt = true)
+        this.waters.reverse();
+        this.waters.forEach(function (w, i) {
+            return _this.waters[i + 1] && w.above(_this.waters[i + 1]);
+        });
+    }
+
+    _createClass(SquareWaters, [{
+        key: 'setCoords',
+        value: function setCoords(x, y) {
+            this.x = x;
+            this.y = y;
+            this.waters.forEach(function (w) {
+                return w.setCoords(x, y);
+            });
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            //if (this.size <= 0 && this.growth < 0)
+            if (this.size < this.maxSize) {
+                if (this.size + this.growValue <= this.maxSize) this.size += this.growValue;else this.size = this.maxSize;
+            }
+            //if (this.maxSize  <= this.size && 0 < this.growth)
+            if (this.maxSize < this.size) {
+                if (this.maxSize <= this.size + this.shrinkValue) this.size += this.shrinkValue;else this.size = this.maxSize;
+            }
+            //if (this.size !== this.maxSize)
+            //    this.size += this.growth
+
+            this._updateWaterSize();
+
+            this.waters.forEach(function (w) {
+                return w.update();
+            });
+        }
+    }, {
+        key: 'draw',
+        value: function draw(context) {
+            this.waters.forEach(function (w) {
+                return w.draw(context);
+            });
+        }
+    }, {
+        key: '_updateWaterSize',
+        value: function _updateWaterSize() {
+            var _this2 = this;
+
+            if (this.size === 0) this.waters.forEach(function (w, i) {
+                w.offset = -_this2.corner;
+                w.alpha = 0;
+            });else this.waters.forEach(function (w, i) {
+                var waveOffset = _this2.size - _this2.corner * (_this2.waters.length - i);
+                w.tilt = false;
+                if (0 <= waveOffset) w.offset = 0;else if (waveOffset <= -_this2.corner) w.offset = -_this2.corner;else {
+                    w.offset = waveOffset;
+                    w.tilt = _this2.size !== _this2.maxSize;
+                }
+                w.alpha = (1 - w.offset / -_this2.corner) * _this2.alpha;
+            });
+        }
+    }, {
+        key: 'generateColorsRange',
+        value: function generateColorsRange(color1, color2) {
+            color1 = _ColorTools2.default.toRgba(color1);
+            color2 = _ColorTools2.default.toRgba(color2);
+            var colorStep = {
+                r: color2.r - color1.r,
+                g: color2.g - color1.g,
+                b: color2.b - color1.b,
+                a: color2.a - color1.a
+            };
+            for (var i = 0; i < this._length; ++i) {
+                var mult = i / this._length;
+                var mult1 = (i + 1) / this._length;
+                this.waters[i].colors = [_ColorTools2.default.rgbaToRgbaString(color1.r + colorStep.r * mult, color1.g + colorStep.g * mult, color1.b + colorStep.b * mult, color1.a + colorStep.a * mult), _ColorTools2.default.rgbaToRgbaString(color1.r + colorStep.r * mult1, color1.g + colorStep.g * mult1, color1.b + colorStep.b * mult1, color1.a + colorStep.a * mult1)];
+            }
+        }
+    }]);
+
+    return SquareWaters;
+}();
+
+exports.default = SquareWaters;
 
 });
 
@@ -2970,6 +3400,7 @@ var BaseWall = function (_GameObjectBehavior) {
 			this.special(self);
 			this.changeSpeed(self);
 			this.move(self);
+			if (self.speed) this.updateWater(self, self.direction * 90, self.speed, _Collision2.default.dotRect);
 			this.collision(self);
 			this.particles(self);
 		}
@@ -3056,6 +3487,13 @@ var BaseWall = function (_GameObjectBehavior) {
 			rect.y = self.y - 3 | 0;
 			rect.w = self.width + 6 | 0;
 			rect.h = self.height + 6 | 0;
+		}
+	}, {
+		key: 'onWindowResize',
+		value: function onWindowResize(self, offsetX, offsetY) {
+			_get(BaseWall.prototype.__proto__ || Object.getPrototypeOf(BaseWall.prototype), 'onWindowResize', this).call(this, self, offsetX, offsetY);
+
+			BaseWall._bounds = [self.data.bounds.x.min - self.width * 2 - self.coordOffset, self.data.bounds.y.max + self.width + self.coordOffset, self.data.bounds.x.max + self.width + self.coordOffset, self.data.bounds.y.min - self.width * 2 - self.coordOffset];
 		}
 	}]);
 
@@ -3174,7 +3612,7 @@ exports.default = BounceWall;
 });
 
 require.register("src/GameObject/Wall/GameOverWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -3208,7 +3646,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -3244,13 +3682,13 @@ var GameOverWall = function (_BaseWall) {
     }
 
     _createClass(GameOverWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(GameOverWall.prototype.__proto__ || Object.getPrototypeOf(GameOverWall.prototype), "init", this).call(this, self, self.data.wallSprites[3][1], "#630001");
+            _get(GameOverWall.prototype.__proto__ || Object.getPrototypeOf(GameOverWall.prototype), 'init', this).call(this, self, self.data.wallSprites[3][1], "#630001");
             self.speed *= 0.5;
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             player.lives = 0;
         }
@@ -3264,7 +3702,7 @@ exports.default = GameOverWall;
 });
 
 require.register("src/GameObject/Wall/HasteWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -3298,7 +3736,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -3334,29 +3772,29 @@ var HasteWall = function (_BaseWall) {
     }
 
     _createClass(HasteWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), "init", this).call(this, self, self.data.wallSprites[2][2], "#24b6fc");
+            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), 'init', this).call(this, self, self.data.wallSprites[2][2], "#24b6fc");
         }
     }, {
-        key: "newCoords",
+        key: 'newCoords',
         value: function newCoords(self) {
-            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), "newCoords", this).call(this, self);
+            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), 'newCoords', this).call(this, self);
             self.speed = 0;
         }
     }, {
-        key: "particles",
+        key: 'particles',
         value: function particles(self) {
             var temp = self.speed;
             if (temp < 2) self.speed = 2;
-            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), "particles", this).call(this, self);
+            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), 'particles', this).call(this, self);
             self.speed = temp;
         }
     }, {
-        key: "update",
+        key: 'update',
         value: function update(self) {
             self.speed += self.data.frameTime * 2;
-            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), "update", this).call(this, self);
+            _get(HasteWall.prototype.__proto__ || Object.getPrototypeOf(HasteWall.prototype), 'update', this).call(this, self);
         }
     }]);
 
@@ -3368,7 +3806,7 @@ exports.default = HasteWall;
 });
 
 require.register("src/GameObject/Wall/HideWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -3402,7 +3840,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -3442,15 +3880,15 @@ var HideWall = function (_BaseWall) {
     }
 
     _createClass(HideWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(HideWall.prototype.__proto__ || Object.getPrototypeOf(HideWall.prototype), "init", this).call(this, self, this.sprite, this.color);
+            _get(HideWall.prototype.__proto__ || Object.getPrototypeOf(HideWall.prototype), 'init', this).call(this, self, this.sprite, this.color);
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             self.data.game.durations.hideWall += player.stateDuration;
-            _get(HideWall.prototype.__proto__ || Object.getPrototypeOf(HideWall.prototype), "penalties", this).call(this, self, player);
+            _get(HideWall.prototype.__proto__ || Object.getPrototypeOf(HideWall.prototype), 'penalties', this).call(this, self, player);
         }
     }]);
 
@@ -3770,7 +4208,6 @@ var OnslaughtWall = function (_BaseWall) {
             _get(OnslaughtWall.prototype.__proto__ || Object.getPrototypeOf(OnslaughtWall.prototype), 'init', this).call(this, self, self.data.wallSprites[1][2], "#2903fe");
             self.maxSpeed = self.speed * 2;
             self.minSpeed = self.speed / 2;
-            if (self.speed !== 2.82) console.log(self.previousBehaviorName, self.speed);
             self.speed = self.minSpeed;
         }
     }, {
@@ -3811,7 +4248,7 @@ exports.default = OnslaughtWall;
 });
 
 require.register("src/GameObject/Wall/PaintingWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -3845,7 +4282,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -3881,15 +4318,15 @@ var PaintingWall = function (_BaseWall) {
     }
 
     _createClass(PaintingWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(PaintingWall.prototype.__proto__ || Object.getPrototypeOf(PaintingWall.prototype), "init", this).call(this, self, self.data.wallSprites[1][3], "#ffe200");
+            _get(PaintingWall.prototype.__proto__ || Object.getPrototypeOf(PaintingWall.prototype), 'init', this).call(this, self, self.data.wallSprites[1][3], "#ffe200");
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             self.data.game.durations.clearScreen += player.stateDuration;
-            _get(PaintingWall.prototype.__proto__ || Object.getPrototypeOf(PaintingWall.prototype), "penalties", this).call(this, self, player);
+            _get(PaintingWall.prototype.__proto__ || Object.getPrototypeOf(PaintingWall.prototype), 'penalties', this).call(this, self, player);
         }
     }]);
 
@@ -3901,7 +4338,7 @@ exports.default = PaintingWall;
 });
 
 require.register("src/GameObject/Wall/ResizeWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -3935,7 +4372,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -3971,21 +4408,21 @@ var ResizeWall = function (_BaseWall) {
     }
 
     _createClass(ResizeWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), "init", this).call(this, self, self.data.wallSprites[4][2], "#383700");
+            _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), 'init', this).call(this, self, self.data.wallSprites[4][2], "#383700");
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             self.data.game.durations.resizeWall += player.stateDuration;
-            _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), "penalties", this).call(this, self, player);
+            _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), 'penalties', this).call(this, self, player);
         }
     }, {
-        key: "draw",
+        key: 'draw',
         value: function draw(self) {
             self.cleanDrawing();
-            _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), "draw", this).call(this, self);
+            _get(ResizeWall.prototype.__proto__ || Object.getPrototypeOf(ResizeWall.prototype), 'draw', this).call(this, self);
         }
     }]);
 
@@ -3997,7 +4434,7 @@ exports.default = ResizeWall;
 });
 
 require.register("src/GameObject/Wall/ReverseWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4031,7 +4468,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4067,15 +4504,15 @@ var ReverseWall = function (_BaseWall) {
     }
 
     _createClass(ReverseWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(ReverseWall.prototype.__proto__ || Object.getPrototypeOf(ReverseWall.prototype), "init", this).call(this, self, self.data.wallSprites[3][2], "#9c9c9c");
+            _get(ReverseWall.prototype.__proto__ || Object.getPrototypeOf(ReverseWall.prototype), 'init', this).call(this, self, self.data.wallSprites[3][2], "#9c9c9c");
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             player.stateValues.reverse += player.stateDuration / 4;
-            _get(ReverseWall.prototype.__proto__ || Object.getPrototypeOf(ReverseWall.prototype), "penalties", this).call(this, self, player);
+            _get(ReverseWall.prototype.__proto__ || Object.getPrototypeOf(ReverseWall.prototype), 'penalties', this).call(this, self, player);
         }
     }]);
 
@@ -4087,7 +4524,7 @@ exports.default = ReverseWall;
 });
 
 require.register("src/GameObject/Wall/ScoreWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4121,7 +4558,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4157,15 +4594,15 @@ var ScoreWall = function (_BaseWall) {
     }
 
     _createClass(ScoreWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(ScoreWall.prototype.__proto__ || Object.getPrototypeOf(ScoreWall.prototype), "init", this).call(this, self, self.data.wallSprites[0][1], "#05a000");
+            _get(ScoreWall.prototype.__proto__ || Object.getPrototypeOf(ScoreWall.prototype), 'init', this).call(this, self, self.data.wallSprites[0][1], "#05a000");
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             player.score -= 200;
-            _get(ScoreWall.prototype.__proto__ || Object.getPrototypeOf(ScoreWall.prototype), "penalties", this).call(this, self, player);
+            _get(ScoreWall.prototype.__proto__ || Object.getPrototypeOf(ScoreWall.prototype), 'penalties', this).call(this, self, player);
         }
     }]);
 
@@ -4177,7 +4614,7 @@ exports.default = ScoreWall;
 });
 
 require.register("src/GameObject/Wall/SlowWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4211,7 +4648,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4247,15 +4684,15 @@ var SlowWall = function (_BaseWall) {
     }
 
     _createClass(SlowWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(SlowWall.prototype.__proto__ || Object.getPrototypeOf(SlowWall.prototype), "init", this).call(this, self, self.data.wallSprites[2][1], "#3d3d3d");
+            _get(SlowWall.prototype.__proto__ || Object.getPrototypeOf(SlowWall.prototype), 'init', this).call(this, self, self.data.wallSprites[2][1], "#3d3d3d");
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             player.maxSpeed /= 2;
-            _get(SlowWall.prototype.__proto__ || Object.getPrototypeOf(SlowWall.prototype), "penalties", this).call(this, self, player);
+            _get(SlowWall.prototype.__proto__ || Object.getPrototypeOf(SlowWall.prototype), 'penalties', this).call(this, self, player);
         }
     }]);
 
@@ -4267,7 +4704,7 @@ exports.default = SlowWall;
 });
 
 require.register("src/GameObject/Wall/SpeedWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4301,7 +4738,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4337,9 +4774,9 @@ var SpeedWall = function (_BaseWall) {
     }
 
     _createClass(SpeedWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(SpeedWall.prototype.__proto__ || Object.getPrototypeOf(SpeedWall.prototype), "init", this).call(this, self, self.data.wallSprites[4][0], "#0010ff");
+            _get(SpeedWall.prototype.__proto__ || Object.getPrototypeOf(SpeedWall.prototype), 'init', this).call(this, self, self.data.wallSprites[4][0], "#0010ff");
             self.speed *= 1.5;
         }
     }]);
@@ -4453,7 +4890,7 @@ exports.default = StalkerWall;
 });
 
 require.register("src/GameObject/Wall/StraightWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4487,7 +4924,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4523,18 +4960,18 @@ var StraightWall = function (_BaseWall) {
     }
 
     _createClass(StraightWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
             self.startX = undefined;
             self.startY = undefined;
-            _get(StraightWall.prototype.__proto__ || Object.getPrototypeOf(StraightWall.prototype), "init", this).call(this, self, self.data.wallSprites[4][3], "#6163ba");
+            _get(StraightWall.prototype.__proto__ || Object.getPrototypeOf(StraightWall.prototype), 'init', this).call(this, self, self.data.wallSprites[4][3], "#6163ba");
         }
     }, {
-        key: "newCoords",
+        key: 'newCoords',
         value: function newCoords(self) {
             self.i_newCoord = 5;
             if (self.startX === undefined) {
-                _get(StraightWall.prototype.__proto__ || Object.getPrototypeOf(StraightWall.prototype), "newCoords", this).call(this, self);
+                _get(StraightWall.prototype.__proto__ || Object.getPrototypeOf(StraightWall.prototype), 'newCoords', this).call(this, self);
                 self.startX = self.x;
                 self.startY = self.y;
             } else {
@@ -4552,7 +4989,7 @@ exports.default = StraightWall;
 });
 
 require.register("src/GameObject/Wall/TimeWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4586,7 +5023,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4622,15 +5059,15 @@ var TimeWall = function (_BaseWall) {
     }
 
     _createClass(TimeWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(TimeWall.prototype.__proto__ || Object.getPrototypeOf(TimeWall.prototype), "init", this).call(this, self, self.data.wallSprites[2][0], "#7c029b");
+            _get(TimeWall.prototype.__proto__ || Object.getPrototypeOf(TimeWall.prototype), 'init', this).call(this, self, self.data.wallSprites[2][0], "#7c029b");
         }
     }, {
-        key: "penalties",
+        key: 'penalties',
         value: function penalties(self, player) {
             player.time -= 30000;
-            _get(TimeWall.prototype.__proto__ || Object.getPrototypeOf(TimeWall.prototype), "penalties", this).call(this, self, player);
+            _get(TimeWall.prototype.__proto__ || Object.getPrototypeOf(TimeWall.prototype), 'penalties', this).call(this, self, player);
         }
     }]);
 
@@ -4675,10 +5112,6 @@ var _get = function get(object, property, receiver) {
         }return getter.call(receiver);
     }
 };
-
-var _Pools = require('../Pools');
-
-var _Pools2 = _interopRequireDefault(_Pools);
 
 var _Behaviors = require('../Behaviors');
 
@@ -4741,7 +5174,7 @@ exports.default = TrackerWall;
 });
 
 require.register("src/GameObject/Wall/TurnBackWall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4775,7 +5208,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -4811,14 +5244,14 @@ var TurnBackWall = function (_BaseWall) {
     }
 
     _createClass(TurnBackWall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), "init", this).call(this, self, self.data.wallSprites[0][4], "#514f98");
+            _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), 'init', this).call(this, self, self.data.wallSprites[0][4], "#514f98");
         }
     }, {
-        key: "newCoords",
+        key: 'newCoords',
         value: function newCoords(self) {
-            if (self.initialized) self.direction = (self.direction + 2) % 4;else _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), "newCoords", this).call(this, self);
+            if (self.initialized) self.direction = (self.direction + 2) % 4;else _get(TurnBackWall.prototype.__proto__ || Object.getPrototypeOf(TurnBackWall.prototype), 'newCoords', this).call(this, self);
         }
     }]);
 
@@ -4940,7 +5373,7 @@ exports.default = TurtleWall;
 });
 
 require.register("src/GameObject/Wall/Wall.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -4974,7 +5407,7 @@ var _get = function get(object, property, receiver) {
     }
 };
 
-var _BaseWall2 = require("./BaseWall");
+var _BaseWall2 = require('./BaseWall');
 
 var _BaseWall3 = _interopRequireDefault(_BaseWall2);
 
@@ -5010,9 +5443,9 @@ var Wall = function (_BaseWall) {
     }
 
     _createClass(Wall, [{
-        key: "init",
+        key: 'init',
         value: function init(self) {
-            _get(Wall.prototype.__proto__ || Object.getPrototypeOf(Wall.prototype), "init", this).call(this, self, self.data.wallSprites[0][0], "#0310eb");
+            _get(Wall.prototype.__proto__ || Object.getPrototypeOf(Wall.prototype), 'init', this).call(this, self, self.data.wallSprites[0][0], "#0310eb");
         }
     }]);
 
@@ -5020,6 +5453,300 @@ var Wall = function (_BaseWall) {
 }(_BaseWall3.default);
 
 exports.default = Wall;
+
+});
+
+require.register("src/GameObject/Water.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _MathTools = require('../Tools/MathTools');
+
+var _MathTools2 = _interopRequireDefault(_MathTools);
+
+var _WaterSpring = require('./WaterSpring');
+
+var _WaterSpring2 = _interopRequireDefault(_WaterSpring);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
+
+var Water = function () {
+    function Water(x, y) {
+        var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+        _classCallCheck(this, Water);
+
+        this._init(x, y, options);
+    }
+
+    _createClass(Water, [{
+        key: '_init',
+        value: function _init(x, y, _ref) {
+            var _ref$length = _ref.length,
+                length = _ref$length === undefined ? 300 : _ref$length,
+                _ref$alpha = _ref.alpha,
+                alpha = _ref$alpha === undefined ? 1 : _ref$alpha,
+                _ref$arc = _ref.arc,
+                arc = _ref$arc === undefined ? 0 : _ref$arc,
+                _ref$step = _ref.step,
+                step = _ref$step === undefined ? 5 : _ref$step,
+                _ref$depth = _ref.depth,
+                depth = _ref$depth === undefined ? 500 : _ref$depth,
+                _ref$colors = _ref.colors,
+                colors = _ref$colors === undefined ? ['cyan', 'blue'] : _ref$colors,
+                _ref$angle = _ref.angle,
+                angle = _ref$angle === undefined ? 0 : _ref$angle,
+                _ref$springConstants = _ref.springConstants,
+                springConstants = _ref$springConstants === undefined ? _WaterSpring2.default.constants : _ref$springConstants;
+
+            //this.tilt = true
+            this.aboveWater = null;
+            this.alpha = alpha;
+            this.colors = colors;
+            this.colorAngle = 0;
+            this.colorPhase = 0;
+            this.x = x;
+            this.y = y;
+            this.offset = 0;
+            this.depth = depth;
+            this.springs = [];
+            this.cos = Math.cos(_MathTools2.default.rads(angle));
+            this.sin = Math.sin(_MathTools2.default.rads(angle));
+            this.cosDepth = Math.cos(_MathTools2.default.rads(angle - 90)) * this.depth;
+            this.sinDepth = Math.sin(_MathTools2.default.rads(angle - 90)) * this.depth;
+            this.isArc = !!arc;
+            this.width = this.isArc ? 0 : length / step;
+            this.constants = Object.assign(_WaterSpring2.default.constants, springConstants);
+            if (arc) for (var i = 0; i * step <= arc; ++i) {
+                this.springs.push(new _WaterSpring2.default(this, x + Math.cos(_MathTools2.default.rads(angle + i * step)) * depth, y - Math.sin(_MathTools2.default.rads(angle + i * step)) * depth, angle + i * step));
+            } else for (var _i = 0; _i * step <= length; ++_i) {
+                this.springs.push(new _WaterSpring2.default(this, x + this.cos * _i * step, y - this.sin * _i * step, angle + 90));
+            }
+        }
+    }, {
+        key: 'setCoords',
+        value: function setCoords(x, y) {
+            var deltaX = x - this.x;
+            var deltaY = y - this.y;
+            this.springs.forEach(function (s) {
+                s.x_start += deltaX;
+                s.y_start += deltaY;
+                s.x += deltaX;
+                s.y += deltaY;
+            });
+            this.x = x;
+            this.y = y;
+        }
+    }, {
+        key: 'above',
+        value: function above(water) {
+            water.aboveWater = this;
+        }
+    }, {
+        key: 'below',
+        value: function below(water) {
+            this.aboveWater = water;
+        }
+    }, {
+        key: '_updateSpringsDeltasAndSpeed',
+        value: function _updateSpringsDeltasAndSpeed() {
+            var _this = this;
+
+            this.springs.forEach(function (current, index) {
+                var length = _this.springs.length;
+                var previous = _this.springs[(length + index - 1) % length];
+                var next = _this.springs[(index + 1) % length];
+                current.deltas.left = current.constants.spreadNeighbours * (current.distance - previous.distance);
+                previous.speed += current.deltas.left;
+
+                current.deltas.right = current.constants.spreadNeighbours * (current.distance - next.distance);
+                next.speed += current.deltas.right;
+            });
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            var _this2 = this;
+
+            if (this.alpha === 0) {
+                this.springs.forEach(function (s) {
+                    s.distance = 0;
+                    s.speed = 0;
+                });
+                return;
+            }
+            if (this.tilt && Math.random() * 100 < 10) this.springs[Math.random() * this.springs.length | 0].speed = -50 + Math.random() * 100;
+            var length = this.springs.length;
+            this.springs.forEach(function (s) {
+                return s.update();
+            });
+
+            var _loop = function _loop(i) {
+                _this2._updateSpringsDeltasAndSpeed();
+                _this2.springs.forEach(function (s, index) {
+                    var previous = _this2.springs[(length + index - 1) % length];
+                    var next = _this2.springs[(index + 1) % length];
+                    previous.distance += s.deltas.left;
+                    next.distance += s.deltas.right;
+                    if (i == 7 && _this2.aboveWater) {
+                        var aboveSpring = _this2.aboveWater.springs[index];
+                        aboveSpring.speed += s.speed * s.constants.spreadUp;
+                        s.speed += aboveSpring.speed * aboveSpring.constants.spreadDown;
+                        aboveSpring.distance += s.distance * s.constants.spreadUp;
+                        s.distance += aboveSpring.distance * s.constants.spreadDown;
+                    }
+                });
+            };
+
+            for (var i = 0; i < 8; ++i) {
+                _loop(i);
+            }
+        }
+    }, {
+        key: 'draw',
+        value: function draw(context) {
+            if (this.alpha === 0) return;
+            context.globalAlpha = this.alpha;
+            var gradient = context.createLinearGradient(this.x, this.y, this.x + this.cosDepth, this.y - this.sinDepth);
+            gradient.addColorStop(0, this.colors[0]);
+            gradient.addColorStop(1, this.colors[1]);
+
+            context.fillStyle = gradient;
+            context.beginPath();
+            if (this.isArc) context.moveTo(this.x, this.y);else context.moveTo(this.x + this.cosDepth, this.y - this.sinDepth);
+            this.springs.forEach(function (s) {
+                return context.lineTo(s.x, s.y);
+            });
+            if (!this.isArc) context.lineTo(this.springs[this.springs.length - 1].x + this.cosDepth, this.y - this.sinDepth);
+            context.closePath();
+            context.fill();
+        }
+    }]);
+
+    return Water;
+}();
+
+exports.default = Water;
+
+});
+
+require.register("src/GameObject/WaterSpring.js", function(exports, require, module) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
+
+var _MathTools = require('../Tools/MathTools');
+
+var _MathTools2 = _interopRequireDefault(_MathTools);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
+
+// tension: A low spring constant will cause large waves that oscillate slowly.
+//     a high spring constant will create small waves that oscillate quickly (like jiggling Jello)
+// dampening: It should be fairly small if you want your waves to oscillate.
+//     A high dampening factor will make the water look thick like molasses,
+//     while a low value will allow the waves to oscillate for a long time.
+// spread: It controls how fast the waves spread. [0 : 0.5] with larger values spread waves faster
+var waterSpringConstants = {
+    tension: 0.05,
+    dampening: 0.025,
+    spreadNeighbours: 0.25,
+    spreadUp: 0.0125,
+    spreadDown: 0.0
+};
+
+var WaterSpring = function () {
+    function WaterSpring(parent, x, y, direction) {
+        _classCallCheck(this, WaterSpring);
+
+        this.deltas = {
+            up: 0,
+            down: 0,
+            left: 0,
+            right: 0
+        };
+        this.x = this.x_start = x;
+        this.y = this.y_start = y;
+        this.parent = parent;
+        this.speed = 0;
+        this.distance = 0;
+        this.direction = direction;
+        this.constants = this.parent.constants;
+    }
+
+    _createClass(WaterSpring, [{
+        key: 'update',
+        value: function update() {
+            if (Math.abs(this.distance) < 0.01) this.distance = 0;
+            if (Math.abs(this.speed) < 0.001) this.speed = 0;
+            var accel = -this.constants.tension * this.distance;
+            accel -= this.speed * this.constants.dampening;
+            this.speed += accel;
+            this.distance += this.speed;
+            var distance = this.distance * this.parent.alpha + this.parent.offset;
+            this.x = this.x_start + this.cos * distance;
+            this.y = this.y_start - this.sin * distance;
+        }
+    }, {
+        key: 'direction',
+        get: function get() {
+            return this._direction;
+        },
+        set: function set(direction) {
+            this._direction = direction;
+            this._radDirection = _MathTools2.default.rads(direction);
+            this.cos = Math.cos(this._radDirection);
+            this.sin = Math.sin(this._radDirection);
+        }
+    }]);
+
+    return WaterSpring;
+}();
+
+exports.default = WaterSpring;
+
+WaterSpring.constants = waterSpringConstants;
 
 });
 
@@ -5065,11 +5792,15 @@ var Collision = function () {
     }
 
     _createClass(Collision, null, [{
-        key: 'isInWall',
-        value: function isInWall(w) {
-            var width = self.width + w.width;
-            var height = self.height + w.height;
-            return w.x - self.width <= self.x && self.x <= w.x + w.width + self.width && w.y - self.height <= self.y && self.y <= w.y + w.height + self.height && w.x - width <= self.x;
+        key: 'dotRect',
+        value: function dotRect(dot, rect) {
+            return rect.x <= dot.x && dot.x <= rect.x + rect.width && rect.y <= dot.y && dot.y <= rect.y + rect.height;
+        }
+    }, {
+        key: 'dotCircle',
+        value: function dotCircle(dot, circle) {
+            var r = circle.width / 2;
+            return r * r >= _MathTools2.default.squareDistance(dot.x, dot.y, circle.x + r, circle.y + r);
         }
 
         // http://stackoverflow.com/a/1879223/5813357
@@ -5089,7 +5820,7 @@ var Collision = function () {
 
             // If the distance is less than the circle's radius, an intersection occurs
             var distanceSquared = distanceX * distanceX + distanceY * distanceY;
-            return distanceSquared < radius * radius;
+            return distanceSquared <= radius * radius;
         }
     }, {
         key: 'rectRect',
@@ -5098,13 +5829,13 @@ var Collision = function () {
             var minY = rect1.y < rect2.y ? rect1.y : rect2.y;
             var maxX = rect1.x < rect2.x ? rect2.x + rect2.width : rect1.x + rect1.width;
             var maxY = rect1.y < rect2.y ? rect2.y + rect2.height : rect1.y + rect1.height;
-            return maxX - minX < rect1.width + rect2.width && maxY - minY < rect1.height + rect2.height;
+            return maxX - minX <= rect1.width + rect2.width && maxY - minY <= rect1.height + rect2.height;
         }
     }, {
         key: 'circleCircle',
         value: function circleCircle(circle1, circle2) {
-            var r = (circle1.width + circle2.width) / 2;
-            return r * r > _MathTools2.default.squareDistance(circle1.x, circle1.y, circle2.x, circle2.y);
+            var radius = (circle1.width + circle2.width) / 2;
+            return radius * radius >= _MathTools2.default.squareDistance(circle1.x, circle1.y, circle2.x, circle2.y);
         }
     }]);
 
@@ -5115,8 +5846,8 @@ exports.default = Collision;
 
 });
 
-require.register("src/Tools/Color.js", function(exports, require, module) {
-"use strict";
+require.register("src/Tools/ColorTools.js", function(exports, require, module) {
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -5138,44 +5869,134 @@ function _classCallCheck(instance, Constructor) {
     }
 }
 
-var Color = function () {
-    function Color() {
-        _classCallCheck(this, Color);
+var ColorTools = function () {
+    function ColorTools() {
+        _classCallCheck(this, ColorTools);
     }
 
-    _createClass(Color, null, [{
-        key: "rgbToHex",
-        value: function rgbToHex(r, g, b) {
-            var toHex = function toHex(x) {
-                return Color.chars[(x - x % 16) / 16] + Color.chars[x % 16];
-            };
-            return "#" + toHex(r) + toHex(g) + toHex(b);
+    _createClass(ColorTools, null, [{
+        key: 'objRgbaToHex',
+        value: function objRgbaToHex(_ref) {
+            var r = _ref.r,
+                g = _ref.g,
+                b = _ref.b,
+                a = _ref.a;
+
+            return ColorTools.rgbaToHex(r, g, b, a);
         }
     }, {
-        key: "hexToRgb",
-        value: function hexToRgb(hex) {
-            var components = [0, 0, 0];
-            var iComponent = -1;
-            for (var i = 0; i < hex.length - 1; ++i) {
-                iComponent += i % 2 === 0;
-                components[iComponent] *= 16;
-                components[iComponent] += Color.chars.indexOf(hex[i + 1]);
+        key: 'rgbaToHex',
+        value: function rgbaToHex(r, g, b, a) {
+            var toHex = function toHex(x) {
+                return ColorTools._chars[(x - x % 16) / 16] + ColorTools._chars[x % 16];
+            };
+            return "#" + toHex(r) + toHex(g) + toHex(b) + (a === undefined ? '' : toHex(Math.round(a * 255)));
+        }
+    }, {
+        key: 'hexToRgba',
+        value: function hexToRgba(hex) {
+            hex = hex.toUpperCase();
+            var components = [0, 0, 0, 0];
+            var componentLength = (hex.length - 1) / 3;
+            if (componentLength != (componentLength | 0)) componentLength = (hex.length - 1) / 4;
+            for (var i = 1; i < hex.length; ++i) {
+                var index = (i - 1) / componentLength | 0;
+                components[index] += components[index] * 15 + ColorTools._chars.indexOf(hex[i]);
             }
-            return components;
+            return {
+                r: components[0],
+                g: components[1],
+                b: components[2],
+                a: components[3] / 255.0
+            };
+        }
+    }, {
+        key: 'objRgbaToRgbaString',
+        value: function objRgbaToRgbaString(_ref2, alpha) {
+            var r = _ref2.r,
+                g = _ref2.g,
+                b = _ref2.b,
+                a = _ref2.a;
+
+            return ColorTools.rgbaToRgbaString(r, g, b, a !== undefined ? a : alpha);
+        }
+    }, {
+        key: 'rgbaToRgbaString',
+        value: function rgbaToRgbaString(r, g, b) {
+            var a = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+
+            return 'rgba(' + (r | 0) + ', ' + (g | 0) + ', ' + (b | 0) + ', ' + a + ')';
+        }
+    }, {
+        key: 'hexToRgbaString',
+        value: function hexToRgbaString(hex, alpha) {
+            var rgba = ColorTools.hexToRgba(hex);
+            if (alpha !== undefined) rgba.a = alpha;
+            return ColorTools.objRgbaToRgbaString(rgba);
+        }
+    }, {
+        key: 'rgbaStringToRgba',
+        value: function rgbaStringToRgba(rgbaString) {
+            var match = ColorTools._rgbaRegex.exec(rgbaString);
+            return match && {
+                r: +match[1],
+                g: +match[2],
+                b: +match[3],
+                a: match[4] && +match[4]
+            };
+        }
+    }, {
+        key: 'rgbaStringToHex',
+        value: function rgbaStringToHex(rgbaString) {
+            var rgba = ColorTools.rgbaStringToRgba(rgbaString);
+            return rgba && ColorTools.objRgbaToHex(rgba);
+        }
+    }, {
+        key: 'toHex',
+        value: function toHex(color) {
+            if (3 <= arguments.length) return ColorTools.rgbaToHex.apply(ColorTools, arguments);
+            if (color instanceof Object) return ColorTools.objRgbaToHex(color);
+            if (color && color[0] === '#') return color;
+            return ColorTools.rgbaStringToHex(color);
+        }
+    }, {
+        key: 'toRgba',
+        value: function toRgba(color) {
+            if (3 <= arguments.length) return {
+                r: arguments[0],
+                g: arguments[1],
+                b: arguments[2],
+                a: arguments[3]
+            };
+            if (color instanceof Object) return color;
+            if (color && color[0] === '#') return ColorTools.hexToRgba(color);
+            return ColorTools.rgbaStringToRgba(color);
+        }
+    }, {
+        key: 'toRgbaString',
+        value: function toRgbaString(color) {
+            if (3 <= arguments.length) return ColorTools.rgbaToRgbaString.apply(ColorTools, arguments);
+            if (color instanceof Object) return ColorTools.objRgbaToRgbaString(color);
+            if (color) {
+                if (color[0] === '#') return ColorTools.hexToRgbaString(color);
+                if (color.toLowerCase().startsWith('rgba(')) return color;
+            }
+            return null;
         }
     }]);
 
-    return Color;
+    return ColorTools;
 }();
 
-exports.default = Color;
+exports.default = ColorTools;
 
-Color.chars = "0123456789ABCDEF";
+ColorTools._chars = "0123456789ABCDEF";
+ColorTools._rgbaRegex = /rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(\d(?:\.?\d*))\s*)?\)/i;
 
 });
 
 require.register("src/Tools/Enum.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -5208,7 +6029,7 @@ exports.default = Enum;
 });
 
 require.register("src/Tools/ImageHelper.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
 	value: true
@@ -5288,7 +6109,7 @@ exports.default = ImageHelper;
 });
 
 require.register("src/Tools/MathTools.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -5316,32 +6137,32 @@ var MathTools = function () {
     }
 
     _createClass(MathTools, null, [{
-        key: "degs",
+        key: 'degs',
         value: function degs(angleInRadians) {
             return angleInRadians * 180 / Math.PI;
         }
     }, {
-        key: "rads",
+        key: 'rads',
         value: function rads(angleInDegrees) {
             return angleInDegrees * Math.PI / 180;
         }
     }, {
-        key: "sqpw",
+        key: 'sqpw',
         value: function sqpw(x) {
             return x * x;
         }
     }, {
-        key: "squareDistance",
+        key: 'squareDistance',
         value: function squareDistance(x, y, x2, y2) {
             return (x - x2) * (x - x2) + (y - y2) * (y - y2);
         }
     }, {
-        key: "distance",
+        key: 'distance',
         value: function distance(x, y, x2, y2) {
-            return Math.sqrt(MathTools.squareDistance.apply(MathTools, arguments));
+            return Math.sqrt((x - x2) * (x - x2) + (y - y2) * (y - y2));
         }
     }, {
-        key: "direction",
+        key: 'direction',
         value: function direction(x, y, x2, y2) {
             if (y == y2) return x <= x2 ? 0 : 180;
             if (x == x2) return y < y2 ? 270 : 90;
@@ -5350,7 +6171,26 @@ var MathTools = function () {
             return y < y2 ? dir + 180 : 180 - dir;
         }
     }, {
-        key: "clamp",
+        key: 'directionRads',
+        value: function directionRads(x, y, x2, y2) {
+            if (y == y2) return x <= x2 ? 0 : Math.PI;
+            if (x == x2) return y < y2 ? Math.PI * 1.5 : Math.PI / 2;
+            var dir = Math.acos(MathTools.sqpw(x - x2) / MathTools.squareDistance(x, y, x2, y2));
+            if (x < x2) return y2 <= y ? dir : Math.PI * 2 - dir;
+            return y < y2 ? dir + Math.PI : Math.PI - dir;
+        }
+    }, {
+        key: 'angleFactor',
+        value: function angleFactor(originAngle, transmitterAngle) {
+            return Math.cos(MathTools.rads(transmitterAngle - originAngle));
+        }
+    }, {
+        key: 'angleRadsFactor',
+        value: function angleRadsFactor(originAngle, transmitterAngle) {
+            return Math.cos(transmitterAngle - originAngle);
+        }
+    }, {
+        key: 'clamp',
         value: function clamp(value, min, max) {
             return value < min ? min : max < value ? max : value;
         }
@@ -5364,7 +6204,7 @@ exports.default = MathTools;
 });
 
 require.register("src/Tools/Random.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
 	value: true
@@ -5392,12 +6232,12 @@ var Random = function () {
 	}
 
 	_createClass(Random, null, [{
-		key: "range",
+		key: 'range',
 		value: function range(min, max) {
 			return Math.floor(Math.random() * (max + 1 - min) + min);
 		}
 	}, {
-		key: "random",
+		key: 'random',
 		value: function random() {
 			return Math.random();
 		}
@@ -5411,7 +6251,7 @@ exports.default = Random;
 });
 
 require.register("src/Tools/Settings.js", function(exports, require, module) {
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -5452,12 +6292,12 @@ var Settings = function () {
     }
 
     _createClass(Settings, [{
-        key: "save",
+        key: 'save',
         value: function save() {
             localStorage.setItem(this.constructor.name, JSON.stringify(this.current));
         }
     }, {
-        key: "load",
+        key: 'load',
         value: function load() {
             var loaded = localStorage.getItem(this.constructor.name);
             if (loaded) loaded = JSON.parse(loaded);
@@ -5515,18 +6355,32 @@ var Tileset = function () {
 	_createClass(Tileset, [{
 		key: 'getTiles',
 		value: function getTiles(tileWidth, tileHeight, offsetX, offsetY) {
+			var onload = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : function () {};
+
 			offsetX = offsetX || 0;
 			offsetY = offsetY || 0;
 			var width = this.tileset.width - offsetX;
 			var height = this.tileset.height - offsetY;
 			var tiles = [];
+			var loadedTiles = 0;
+			var totalTiles = (width / tileWidth | 0) * (height / tileHeight | 0);
+			var tileOnload = function tileOnload() {
+				return ++loadedTiles === totalTiles && onload();
+			};
 			for (var x = 0; x * tileWidth < width; ++x) {
 				var column = [];
 				for (var y = 0; y * tileHeight < height; ++y) {
-					column.push(_ImageHelper2.default.imageToTile(this.tileset, offsetX + x * tileWidth, offsetY + y * tileHeight, tileWidth, tileHeight));
+					column.push(this._createTile(offsetX + x * tileWidth, offsetY + y * tileHeight, tileWidth, tileHeight, tileOnload));
 				}tiles.push(column);
 			}
 			return tiles;
+		}
+	}, {
+		key: '_createTile',
+		value: function _createTile(x, y, width, height, onload) {
+			var tile = _ImageHelper2.default.imageToTile(this.tileset, x, y, width, height);
+			if (tile.complete) onload();else tile.onload = onload;
+			return tile;
 		}
 	}]);
 
