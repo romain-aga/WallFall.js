@@ -45,6 +45,7 @@ export default class Player extends GameObjectBehavior
         self.score = 0
         self.lastLifeWarned = false
         self.time = this.startTime
+        self.explosion = null
         self.startedAt = self.data.now
         self.countdown = self.time / 1000
         self.i_particle = 0
@@ -59,21 +60,36 @@ export default class Player extends GameObjectBehavior
             self.countdown = 0
     }
 
+    _updateExplosion(self)
+    {
+        if (! self.explosion.radius)
+            self.explosion = null
+        else
+        {
+            self.explosion.x = self.x
+            self.explosion.y = self.y
+        }
+    }
+
     update(self)
     {
         this._updateCoord(self)
+        this.updateWater(self, self.direction, self.speed)
         this._updateState(self)
         this._drawQueue(self)
         this._updateCountdown(self)
+        if (self.explosion)
+            this._updateExplosion(self)
         if (self.countdown <= 0)
         {
             self.lives--
             self.time += this.startTime
+            self.explosion = New.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width * 1.5, self.color, false, 5)
         }
         if (self.lives <= 0)
             self.destroy()
 	}
-	
+    
 	destroy(self)
 	{
         New.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width * 2, self.color, false, 10)
@@ -112,7 +128,8 @@ export default class Player extends GameObjectBehavior
                 self.state = state
             }
         }
-        if (self.state !== normalState && self.stateValues[self.state] <= ++self.i_stateExplosion)
+        if (self.state !== normalState && self.stateValues[self.state] <= ++self.i_stateExplosion
+            || self.countdown <= 12 && self.countdown * 10 <= ++self.i_stateExplosion)
         {
             New.Explosion(self.x - self.halfWidth, self.y - self.halfHeight, self.width, self.color, false, 2.5)
             self.i_stateExplosion = 0
@@ -156,6 +173,6 @@ export default class Player extends GameObjectBehavior
     _drawQueue(self)
     {
         if (self.i_particle++ % 2 === 0 && self.speed)
-            New.Particle(self.x, self.y, 0, 0, self.width, self.color)
+            New.Particle(self.x, self.y, 0, 0, self.width, self.color, false, 1.0 / (self.countdown / 30))
     }
 }

@@ -71,6 +71,8 @@ export default class BaseWall extends GameObjectBehavior
 		this.special(self)
 		this.changeSpeed(self)
 		this.move(self)
+		if (self.speed)
+			this.updateWater(self, self.direction * 90, self.speed, Collision.dotRect)
 		this.collision(self)
 		this.particles(self)
 	}
@@ -188,5 +190,17 @@ export default class BaseWall extends GameObjectBehavior
 		rect.y = (self.y - 3) | 0
 		rect.w = (self.width + 6) | 0
 		rect.h = (self.height + 6) | 0
+	}
+
+	onWindowResize(self, offsetX, offsetY)
+	{
+		super.onWindowResize(self, offsetX, offsetY)
+
+		BaseWall._bounds = [
+			self.data.bounds.x.min - self.width * 2 - self.coordOffset,
+			self.data.bounds.y.max + self.width + self.coordOffset,
+			self.data.bounds.x.max + self.width + self.coordOffset,
+			self.data.bounds.y.min - self.width * 2 - self.coordOffset
+		]
 	}
 }

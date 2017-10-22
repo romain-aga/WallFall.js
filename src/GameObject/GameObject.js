@@ -77,6 +77,11 @@ export default class GameObject
 			)
 	}
 
+	onWindowResize(offsetX, offsetY)
+	{
+		this.behavior.onWindowResize(this, offsetX, offsetY)
+	}
+
 	destroy()
 	{
 		this.behavior.destroy(this)

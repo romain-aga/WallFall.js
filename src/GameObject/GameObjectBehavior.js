@@ -1,6 +1,7 @@
 'use strict'
 
 import MathTools from '../Tools/MathTools'
+import Collision from '../Tools/Collision'
 
 export default class GameObjectBehavior
 {
@@ -13,14 +14,34 @@ export default class GameObjectBehavior
 	{
 	}
 	
+	updateWater(self, direction, speed, collisionMethod = Collision.dotCircle)
+	{
+		if (! speed)
+			return
+		self.data.waters.waters
+			.filter(w => w.alpha)
+			.forEach(w => w.springs
+				.forEach(s => {
+					if (collisionMethod(s, self))
+						s.speed += MathTools.angleFactor(s.direction, direction) * speed
+				}))
+	}
+
 	update(self)
 	{
         if (self.speed)
         {
+			this.updateWater(self)
             let rad = MathTools.rads(self.direction)
             self.x += Math.cos(rad) * self.speed
             self.y -= Math.sin(rad) * self.speed
         }
+	}
+
+	onWindowResize(self, offsetX, offsetY)
+	{
+		self.x += offsetX
+		self.y += offsetY
 	}
 	
 	draw(self)
