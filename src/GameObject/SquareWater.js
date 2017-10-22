@@ -32,6 +32,7 @@ export default class SquareWater extends Water
         this.x = x
         this.y = y
         this.springs = []
+        this.gradientPhases = [this.gradientPhase1, this.gradientPhase2]
         const halfSide = (side - corner * 2) / 2
         for (let iSide = 0; iSide < 4; ++iSide)
         {
@@ -92,12 +93,12 @@ export default class SquareWater extends Water
         }
         this.colorAngle = (this.colorAngle + 5) % 360
         if (this.colorAngle === 0)
-            this.colorPhase = ++this.colorPhase % 2
+            this.colorPhase = ++this.colorPhase % this.gradientPhases.length
     }
 
     gradientColors(gradient, color1, color2)
     {
-        [this.gradientPhase1, this.gradientPhase2, this.gradientPhase3][this.colorPhase]
+        this.gradientPhases[this.colorPhase]
             .call(this, gradient, color1, color2, this.colorAngle / 360.0)
     }
 
@@ -113,11 +114,5 @@ export default class SquareWater extends Water
         gradient.addColorStop(0, color1)
         gradient.addColorStop(value, color2)
         gradient.addColorStop(1, color1)
-    }
-
-    gradientPhase3(gradient, color1, color2, value)
-    {
-        gradient.addColorStop(value, color1)
-        gradient.addColorStop(1, color2)
     }
 }

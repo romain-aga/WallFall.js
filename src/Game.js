@@ -30,6 +30,7 @@ export default class Game
 		this.levelStepMax = 5
 		this.levelMax = (spawnOrder.length - 1) * this.levelStepMax
 		this.bonusMax = bonusOrbs.length - 1
+		this.levelBonusCount = 0
 		this.levelStep = 0
 		this.data.onWindowResize = (x, y) => this._onWindowResize(x, y)
 		this.context = data.context
@@ -77,7 +78,9 @@ export default class Game
 		if (this.data.frameTime === null)
 			this._getFrameTime()
 		this._updateLevel()
-		if (Random.random() < Pools.Wall.length / 5000)
+		if (this.levelBonusCount < this.levelStepMax
+			&& Random.random() < Pools.Wall.length / ((this.data.information.level + 1) * 100)
+		)
 			this._spawnBonus()
 		Object.keys(this.data.game.durations)
 			.forEach(k => (0 < this.data.game.durations[k]) && (this.data.game.durations[k] -= 1))
@@ -101,6 +104,7 @@ export default class Game
 				}
 		}
 		(this.lastBonus = bonus)()
+		this.levelBonusCount++
 	}
 
 	_initBonusRules()
@@ -110,7 +114,7 @@ export default class Game
 			(b, p, wLen) => New.LifeOrb === b && 3 <= p.lives,
 			(b, p, wLen) => New.BerserkOrb === b && wLen <= 5,
 			(b, p, wLen) => New.DestroyerOrb === b && wLen <= 10,
-			(b, p, wLen) => New.TimeOrb === b && 120 <= p.countdown,
+			(b, p, wLen) => New.TimeOrb === b && 5 <= p.countdown,
 			(b, p, wLen) => New.SpeedOrb === b && 30 <= p.maxSpeed,
 			(b, p, wLen) => (New.StopOrb === b || New.SlowdownOrb === b)
 				&& 0 < this.data.game.durations.stopWall + this.data.game.durations.slowWall
@@ -155,6 +159,7 @@ export default class Game
 		this.waters.maxSize += this.waters.corner / this.levelStepMax
 		this.levelStep = (this.levelStep + 1) % this.levelStepMax
 		this.data.game.levelStep--
+		this.levelBonusCount = 0
 	}
 
 	_updateGameInformation()
@@ -189,13 +194,21 @@ export default class Game
 
 	_draw()
 	{
-		this.data.background.fillStyle = "black"
-		this.data.background.fillRect(
-			this.data.bounds.x.min, this.data.bounds.y.min,
-			this.data.width, this.data.height
-		)
-		this.waters.draw(this.data.background)
-		this.data.context.drawImage(this.data.backgroundCanvas, 0, 0)
+		if(0 < this.data.game.durations.clearScreen)
+		{
+			this.waters.draw(this.data.context)
+			this.data.context.globalAlpha = 1
+		}
+		else
+		{
+			this.data.background.fillStyle = "black"
+			this.data.background.fillRect(
+				this.data.bounds.x.min, this.data.bounds.y.min,
+				this.data.width, this.data.height
+			)
+			this.waters.draw(this.data.background)
+			this.data.context.drawImage(this.data.backgroundCanvas, 0, 0)
+		}
 		this._poolValues.forEach(p => p.forEach(o => o.draw()))
 		this._updateGameInformation()
 	}

@@ -20,6 +20,7 @@ export default class Explosion extends GameObjectBehavior
         self.color = color
         self.isSquare = isSquare
         self.colorGap = colorGap
+        self.isAffectedByStopWall = self.data.game.durations.stopWall === 0
         self.rgb = ColorTools.hexToRgba(color)
         for (let i = 0; i < 3; ++i)
             if (self.rgb[i] + self.colorGap > 255)
@@ -30,6 +31,8 @@ export default class Explosion extends GameObjectBehavior
 	
 	update(self)
 	{
+        if (self.isAffectedByStopWall && self.data.game.durations.stopWall)
+            return
         self.x += self.decreasingSpeed
         self.y += self.decreasingSpeed
         self.radius -= self.decreasingSpeed

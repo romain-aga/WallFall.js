@@ -18,6 +18,7 @@ export default class Particle extends GameObjectBehavior
         self.radius = width / 2
         self.color = color
         self.isSquare = isSquare
+        self.isAffectedByStopWall = self.data.game.durations.stopWall === 0
         let rads = MathTools.rads(direction)
         self.dx = Math.cos(rads) * self.speed + self.decreasingSpeed
         self.dy = -Math.sin(rads) * self.speed + self.decreasingSpeed
@@ -25,6 +26,8 @@ export default class Particle extends GameObjectBehavior
 	
 	update(self)
 	{
+        if (self.isAffectedByStopWall && self.data.game.durations.stopWall)
+            return
         self.radius -= self.decreasingSpeed
         self.height = self.width = self.radius * 2
         if (self.radius <= 0)
